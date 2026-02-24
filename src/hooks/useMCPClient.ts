@@ -21,6 +21,9 @@ import {
   mcpToolsToGeminiFunctions,
   createGeminiChat,
 } from '../services/geminiService';
+import { createLogger } from '../services/logger';
+
+const log = createLogger('MCP');
 
 /**
  * A fetch wrapper that enables text streaming on React Native.
@@ -165,7 +168,7 @@ export function useMCPClient(): UseMCPClientReturn {
       toolDefsRef.current = fullTools;
       setTools(fullTools);
     } catch (err) {
-      console.warn('[MCP] Could not list tools:', err);
+      log.warn('Could not list tools', err);
     }
   }, []);
 
@@ -186,6 +189,7 @@ export function useMCPClient(): UseMCPClientReturn {
     setStatus('connecting');
     setErrorMessage(null);
     serverUrlRef.current = serverUrl;
+    log.info('Connecting to server', { url: serverUrl });
 
     try {
       const url = new URL(serverUrl);
@@ -211,11 +215,13 @@ export function useMCPClient(): UseMCPClientReturn {
       transportRef.current = transport;
 
       setStatus('connected');
+      log.info('Connected successfully');
 
       // Immediately fetch available tools to populate the UI
       await refreshTools(client);
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      log.error('Connection failed', { error: message });
       setErrorMessage(message);
       setStatus('error');
       clientRef.current = null;
@@ -228,6 +234,7 @@ export function useMCPClient(): UseMCPClientReturn {
   // ---------------------------------------------------------------------------
 
   const disconnect = useCallback(async () => {
+    log.info('Disconnecting');
     await cleanupTransport();
     setStatus('disconnected');
     setErrorMessage(null);
@@ -308,6 +315,7 @@ export function useMCPClient(): UseMCPClientReturn {
           appendMessage('assistant', `\uD83D\uDD27 Calling tool: **${toolName}**`);
 
           try {
+            log.debug('Calling MCP tool', { tool: toolName, args: fc.args });
             const mcpResult = await clientRef.current!.callTool({
               name: toolName,
               arguments: fc.args as Record<string, unknown>,
@@ -327,6 +335,7 @@ export function useMCPClient(): UseMCPClientReturn {
             });
           } catch (err) {
             const errMsg = err instanceof Error ? err.message : String(err);
+            log.error('MCP tool call failed', { tool: toolName, error: errMsg });
             functionResponses.push({
               name: toolName,
               response: {
@@ -367,6 +376,7 @@ export function useMCPClient(): UseMCPClientReturn {
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
+      log.error('sendMessage failed', { error: message });
       appendMessage('error', `Error: ${message}`);
     } finally {
       setIsProcessing(false);
@@ -389,13 +399,13 @@ export function useMCPClient(): UseMCPClientReturn {
           (nextState === 'background' || nextState === 'inactive')
         ) {
           // App is going to the background – pausing stream.
-          console.log('[MCP] App backgrounded – pausing stream.');
+          log.info('App backgrounded – pausing stream.');
         } else if (
           (prevState === 'background' || prevState === 'inactive') &&
           nextState === 'active'
         ) {
           // App returned to the foreground – try to resume the stream
-          console.log('[MCP] App foregrounded – attempting stream resume.');
+          log.info('App foregrounded – attempting stream resume.');
           const transport = transportRef.current;
           const url = serverUrlRef.current;
 
@@ -408,13 +418,13 @@ export function useMCPClient(): UseMCPClientReturn {
                     resumptionTokenRef.current = token;
                   },
                 });
-                console.log('[MCP] Stream resumed with resumption token.');
+                log.info('Stream resumed with resumption token.');
               } else {
                 // No token available – perform a fresh reconnect
                 await connect(url);
               }
             } catch (err) {
-              console.warn('[MCP] Resume failed, reconnecting from scratch:', err);
+              log.warn('Resume failed, reconnecting from scratch', err);
               await connect(url);
             }
           }

@@ -5,7 +5,7 @@
  * the MCP server displayed in conversation bubbles.
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   KeyboardAvoidingView,
   Platform,
@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import Markdown from 'react-native-markdown-display';
 
 import { MCPMessage } from '../hooks/useMCPClient';
 
@@ -121,6 +122,12 @@ function MessageBubble({ message }: { message: MCPMessage }) {
   const isUser = message.role === 'user';
   const isError = message.role === 'error';
 
+  const mdStyle = useMemo(
+    () =>
+      isUser ? markdownUserStyles : markdownAssistantStyles,
+    [isUser],
+  );
+
   return (
     <View style={[styles.bubbleWrapper, isUser ? styles.bubbleRight : styles.bubbleLeft]}>
       <View
@@ -129,14 +136,18 @@ function MessageBubble({ message }: { message: MCPMessage }) {
           isUser ? styles.bubbleUser : isError ? styles.bubbleError : styles.bubbleAssistant,
         ]}
       >
-        <Text
-          style={[
-            styles.bubbleText,
-            isUser ? styles.bubbleTextUser : styles.bubbleTextAssistant,
-          ]}
-        >
-          {message.content}
-        </Text>
+        {isUser || isError ? (
+          <Text
+            style={[
+              styles.bubbleText,
+              isUser ? styles.bubbleTextUser : styles.bubbleTextAssistant,
+            ]}
+          >
+            {message.content}
+          </Text>
+        ) : (
+          <Markdown style={mdStyle}>{message.content}</Markdown>
+        )}
         <Text style={[styles.timestamp, isUser ? styles.timestampUser : styles.timestampAssistant]}>
           {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
@@ -267,5 +278,87 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: '600',
     fontSize: 15,
+  },
+});
+
+// ---------------------------------------------------------------------------
+// Markdown styles for assistant messages
+// ---------------------------------------------------------------------------
+
+const markdownAssistantStyles = StyleSheet.create({
+  body: { color: '#1a1a1a', fontSize: 15, lineHeight: 22 },
+  paragraph: { marginTop: 0, marginBottom: 6 },
+  heading1: { fontSize: 22, fontWeight: '700', color: '#1a1a1a', marginBottom: 6, marginTop: 8 },
+  heading2: { fontSize: 19, fontWeight: '700', color: '#1a1a1a', marginBottom: 4, marginTop: 6 },
+  heading3: { fontSize: 17, fontWeight: '600', color: '#1a1a1a', marginBottom: 4, marginTop: 6 },
+  strong: { fontWeight: '700' },
+  em: { fontStyle: 'italic' },
+  link: { color: '#2563eb', textDecorationLine: 'underline' },
+  blockquote: {
+    borderLeftWidth: 3,
+    borderLeftColor: '#d1d5db',
+    paddingLeft: 10,
+    marginVertical: 6,
+  },
+  code_inline: {
+    backgroundColor: '#f3f4f6',
+    color: '#e11d48',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 13,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
+  },
+  fence: {
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    padding: 10,
+    marginVertical: 6,
+  },
+  code_block: {
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 13,
+    color: '#1a1a1a',
+  },
+  list_item: { marginBottom: 4 },
+  bullet_list: { marginVertical: 4 },
+  ordered_list: { marginVertical: 4 },
+  hr: { backgroundColor: '#d1d5db', height: 1, marginVertical: 8 },
+  table: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 4, marginVertical: 6 },
+  thead: { backgroundColor: '#f3f4f6' },
+  th: { padding: 6, fontWeight: '600' },
+  td: { padding: 6 },
+  tr: { borderBottomWidth: 1, borderColor: '#e5e7eb' },
+});
+
+// ---------------------------------------------------------------------------
+// Markdown styles for user messages (white text on blue)
+// ---------------------------------------------------------------------------
+
+const markdownUserStyles = StyleSheet.create({
+  body: { color: '#fff', fontSize: 15, lineHeight: 22 },
+  paragraph: { marginTop: 0, marginBottom: 6 },
+  strong: { fontWeight: '700', color: '#fff' },
+  em: { fontStyle: 'italic' },
+  link: { color: '#bfdbfe', textDecorationLine: 'underline' },
+  code_inline: {
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    color: '#fff',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 13,
+    paddingHorizontal: 4,
+    paddingVertical: 1,
+    borderRadius: 3,
+  },
+  fence: {
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: 8,
+    padding: 10,
+    marginVertical: 6,
+  },
+  code_block: {
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    fontSize: 13,
+    color: '#fff',
   },
 });

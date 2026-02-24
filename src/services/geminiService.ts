@@ -7,9 +7,12 @@
  */
 
 import { GoogleGenAI, Type, FunctionDeclaration, Content } from '@google/genai';
+import { createLogger } from './logger';
 
 // Re-export for convenience
 export type { Content };
+
+const log = createLogger('Gemini');
 
 const DEFAULT_MODEL = 'gemini-2.0-flash-lite';
 
@@ -123,6 +126,12 @@ export function createGeminiChat(params: {
   if (params.history && params.history.length > 0) {
     config.history = params.history;
   }
+
+  log.debug('Creating chat session', {
+    model: params.model ?? DEFAULT_MODEL,
+    toolCount: params.tools.length,
+    historyLength: params.history?.length ?? 0,
+  });
 
   return genai.chats.create({
     model: params.model ?? DEFAULT_MODEL,
