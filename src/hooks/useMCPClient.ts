@@ -1,14 +1,15 @@
 /**
  * useMCPClient.ts
  *
- * A React hook that manages the lifecycle of an MCP (Model Context Protocol)
- * client over Streamable HTTP transport.  It handles:
+ * A React hook that manages the lifecycle of multiple MCP (Model Context
+ * Protocol) clients over Streamable HTTP transport.  It handles:
  *
- *  - Connecting / disconnecting to a remote MCP server
+ *  - Connecting / disconnecting to multiple remote MCP servers
  *  - AppState lifecycle: pausing when the app goes to the background and
  *    resuming (with the Last-Event-ID resumption token) when it comes back
- *  - Exposing the list of available tools from the server
- *  - A `sendMessage` helper that routes a user prompt through the MCP client
+ *  - Exposing the aggregated list of available tools from all servers
+ *  - A `sendMessage` helper that routes a user prompt through Gemini with
+ *    tool calls dispatched to the correct server
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -73,25 +74,51 @@ export interface MCPMessage {
   timestamp: Date;
 }
 
-export interface UseMCPClientReturn {
-  /** Current connection status */
-  status: 'disconnected' | 'connecting' | 'connected' | 'error';
-  /** Human-readable error message when status === 'error' */
+export type ServerStatus = 'disconnected' | 'connecting' | 'connected' | 'error';
+
+export interface ServerConfig {
+  id: string;
+  name: string;
+  url: string;
+}
+
+export interface ServerState {
+  config: ServerConfig;
+  status: ServerStatus;
   errorMessage: string | null;
-  /** Available tools reported by the MCP server */
+  tools: MCPTool[];
+}
+
+/** Runtime refs for a single server connection (not exposed to UI) */
+interface ServerRuntime {
+  client: Client | null;
+  transport: StreamableHTTPClientTransport | null;
+  resumptionToken: string | undefined;
+}
+
+export interface UseMCPClientReturn {
+  /** All configured servers with their current state */
+  servers: ServerState[];
+  /** Aggregated tools from all connected servers */
   tools: MCPTool[];
   /** Chat message history */
   messages: MCPMessage[];
   /** Whether the AI is currently processing a response */
   isProcessing: boolean;
+  /** Whether at least one server is connected */
+  isConnected: boolean;
   /** Gemini API key */
   apiKey: string;
   /** Set the Gemini API key */
   setApiKey: (key: string) => void;
-  /** Connect to the given server URL */
-  connect: (serverUrl: string) => Promise<void>;
-  /** Disconnect from the current server */
-  disconnect: () => Promise<void>;
+  /** Add a new server configuration */
+  addServer: (name: string, url: string) => void;
+  /** Remove a server configuration (disconnects first) */
+  removeServer: (serverId: string) => Promise<void>;
+  /** Connect a specific server by id */
+  connectServer: (serverId: string) => Promise<void>;
+  /** Disconnect a specific server by id */
+  disconnectServer: (serverId: string) => Promise<void>;
   /** Send a user message and get an AI response (with MCP tool calling) */
   sendMessage: (text: string) => Promise<void>;
 }
@@ -104,30 +131,55 @@ function nextId(): string {
   return String(++_msgId);
 }
 
+let _serverId = 0;
+function nextServerId(): string {
+  return `srv_${++_serverId}`;
+}
+
 // ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
 export function useMCPClient(): UseMCPClientReturn {
-  const [status, setStatus] = useState<UseMCPClientReturn['status']>('disconnected');
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [tools, setTools] = useState<MCPTool[]>([]);
+  const [servers, setServers] = useState<ServerState[]>([]);
   const [messages, setMessages] = useState<MCPMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [apiKey, setApiKey] = useState('');
 
-  // Stable refs so callbacks always see the latest values without re-subscribing
-  const clientRef = useRef<Client | null>(null);
-  const transportRef = useRef<StreamableHTTPClientTransport | null>(null);
-  const serverUrlRef = useRef<string>('');
-  /** Last resumption token received from the server (for reconnection) */
-  const resumptionTokenRef = useRef<string | undefined>(undefined);
+  // Runtime data keyed by server id (not in React state – avoids stale closures)
+  const runtimesRef = useRef<Map<string, ServerRuntime>>(new Map());
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
-  /** Full tool definitions from the MCP server (needed for AI tool calling) */
-  const toolDefsRef = useRef<MCPTool[]>([]);
   /** Conversation history in Gemini Content format */
   const conversationRef = useRef<Content[]>([]);
+
+  // Keep a ref to the latest servers array so callbacks see fresh data
+  const serversRef = useRef<ServerState[]>(servers);
+  serversRef.current = servers;
+
+  // ---------------------------------------------------------------------------
+  // Derived: aggregate tools from all connected servers
+  // ---------------------------------------------------------------------------
+
+  const tools: MCPTool[] = servers
+    .filter((s) => s.status === 'connected')
+    .flatMap((s) => s.tools);
+
+  const isConnected = servers.some((s) => s.status === 'connected');
+
+  // Build a lookup: tool name → server id (for routing tool calls)
+  const toolToServerRef = useRef<Map<string, string>>(new Map());
+  useEffect(() => {
+    const map = new Map<string, string>();
+    for (const s of servers) {
+      if (s.status === 'connected') {
+        for (const t of s.tools) {
+          map.set(t.name, s.config.id);
+        }
+      }
+    }
+    toolToServerRef.current = map;
+  }, [servers]);
 
   // ---------------------------------------------------------------------------
   // Internal helpers
@@ -140,108 +192,161 @@ export function useMCPClient(): UseMCPClientReturn {
     ]);
   }, []);
 
-  const cleanupTransport = useCallback(async () => {
+  const updateServer = useCallback(
+    (serverId: string, patch: Partial<Omit<ServerState, 'config'>>) => {
+      setServers((prev) =>
+        prev.map((s) => (s.config.id === serverId ? { ...s, ...patch } : s)),
+      );
+    },
+    [],
+  );
+
+  const cleanupRuntime = useCallback(async (serverId: string) => {
+    const runtime = runtimesRef.current.get(serverId);
+    if (!runtime) return;
     try {
-      if (clientRef.current) {
-        await clientRef.current.close();
+      if (runtime.client) {
+        await runtime.client.close();
       }
     } catch {
       // ignore close errors
     }
-    clientRef.current = null;
-    transportRef.current = null;
-    resumptionTokenRef.current = undefined;
+    runtime.client = null;
+    runtime.transport = null;
+    runtime.resumptionToken = undefined;
   }, []);
 
   // ---------------------------------------------------------------------------
-  // refreshTools – fetch the tool list from the connected server
+  // refreshTools – fetch the tool list from a connected server
   // ---------------------------------------------------------------------------
 
-  const refreshTools = useCallback(async (client: Client) => {
-    try {
-      const result = await client.listTools();
-      const fullTools = (result.tools ?? []).map((t) => ({
-        name: t.name,
-        description: t.description,
-        inputSchema: t.inputSchema as Record<string, unknown>,
-      }));
-      toolDefsRef.current = fullTools;
-      setTools(fullTools);
-    } catch (err) {
-      log.warn('Could not list tools', err);
-    }
+  const refreshServerTools = useCallback(
+    async (serverId: string, client: Client) => {
+      try {
+        const result = await client.listTools();
+        const fullTools: MCPTool[] = (result.tools ?? []).map((t) => ({
+          name: t.name,
+          description: t.description,
+          inputSchema: t.inputSchema as Record<string, unknown>,
+        }));
+        updateServer(serverId, { tools: fullTools });
+      } catch (err) {
+        log.warn('Could not list tools', err);
+      }
+    },
+    [updateServer],
+  );
+
+  // ---------------------------------------------------------------------------
+  // addServer
+  // ---------------------------------------------------------------------------
+
+  const addServer = useCallback((name: string, url: string) => {
+    const id = nextServerId();
+    const config: ServerConfig = { id, name, url };
+    const state: ServerState = {
+      config,
+      status: 'disconnected',
+      errorMessage: null,
+      tools: [],
+    };
+    runtimesRef.current.set(id, {
+      client: null,
+      transport: null,
+      resumptionToken: undefined,
+    });
+    setServers((prev) => [...prev, state]);
   }, []);
 
   // ---------------------------------------------------------------------------
-  // connect
+  // removeServer
   // ---------------------------------------------------------------------------
 
-  const connect = useCallback(async (serverUrl: string) => {
-    if (!serverUrl.trim()) {
-      setErrorMessage('Server URL must not be empty.');
-      setStatus('error');
-      return;
-    }
-
-    // Tear down any existing connection first
-    await cleanupTransport();
-
-    setStatus('connecting');
-    setErrorMessage(null);
-    serverUrlRef.current = serverUrl;
-    log.info('Connecting to server', { url: serverUrl });
-
-    try {
-      const url = new URL(serverUrl);
-
-      const transport = new StreamableHTTPClientTransport(url, {
-        fetch: mcpFetch as any,
-        reconnectionOptions: {
-          maxRetries: 3,
-          initialReconnectionDelay: 1000,
-          maxReconnectionDelay: 30_000,
-          reconnectionDelayGrowFactor: 1.5,
-        },
-      });
-
-      const client = new Client(
-        { name: 'mobile-mcp-client', version: '1.0.0' },
-        { capabilities: {} },
-      );
-
-      await client.connect(transport);
-
-      clientRef.current = client;
-      transportRef.current = transport;
-
-      setStatus('connected');
-      log.info('Connected successfully');
-
-      // Immediately fetch available tools to populate the UI
-      await refreshTools(client);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      log.error('Connection failed', { error: message });
-      setErrorMessage(message);
-      setStatus('error');
-      clientRef.current = null;
-      transportRef.current = null;
-    }
-  }, [cleanupTransport, refreshTools]);
+  const removeServer = useCallback(
+    async (serverId: string) => {
+      await cleanupRuntime(serverId);
+      runtimesRef.current.delete(serverId);
+      setServers((prev) => prev.filter((s) => s.config.id !== serverId));
+    },
+    [cleanupRuntime],
+  );
 
   // ---------------------------------------------------------------------------
-  // disconnect
+  // connectServer
   // ---------------------------------------------------------------------------
 
-  const disconnect = useCallback(async () => {
-    log.info('Disconnecting');
-    await cleanupTransport();
-    setStatus('disconnected');
-    setErrorMessage(null);
-    setTools([]);
-    toolDefsRef.current = [];
-    conversationRef.current = [];
-  }, [cleanupTransport]);
+  const connectServer = useCallback(
+    async (serverId: string) => {
+      const server = serversRef.current.find((s) => s.config.id === serverId);
+      if (!server) return;
+
+      const serverUrl = server.config.url;
+      if (!serverUrl.trim()) {
+        updateServer(serverId, { errorMessage: 'Server URL must not be empty.', status: 'error' });
+        return;
+      }
+
+      await cleanupRuntime(serverId);
+
+      updateServer(serverId, { status: 'connecting', errorMessage: null });
+      log.info('Connecting to server', { id: serverId, url: serverUrl });
+
+      try {
+        const url = new URL(serverUrl);
+
+        const transport = new StreamableHTTPClientTransport(url, {
+          fetch: mcpFetch as any,
+          reconnectionOptions: {
+            maxRetries: 3,
+            initialReconnectionDelay: 1000,
+            maxReconnectionDelay: 30_000,
+            reconnectionDelayGrowFactor: 1.5,
+          },
+        });
+
+        const client = new Client(
+          { name: 'mobile-mcp-client', version: '1.0.0' },
+          { capabilities: {} },
+        );
+
+        await client.connect(transport);
+
+        const runtime = runtimesRef.current.get(serverId);
+        if (runtime) {
+          runtime.client = client;
+          runtime.transport = transport;
+        }
+
+        updateServer(serverId, { status: 'connected' });
+        log.info('Connected successfully', { id: serverId });
+
+        await refreshServerTools(serverId, client);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        log.error('Connection failed', { id: serverId, error: message });
+        updateServer(serverId, { errorMessage: message, status: 'error' });
+        const runtime = runtimesRef.current.get(serverId);
+        if (runtime) {
+          runtime.client = null;
+          runtime.transport = null;
+        }
+      }
+    },
+    [cleanupRuntime, refreshServerTools, updateServer],
+  );
+
+  // ---------------------------------------------------------------------------
+  // disconnectServer
+  // ---------------------------------------------------------------------------
+
+  const disconnectServer = useCallback(
+    async (serverId: string) => {
+      log.info('Disconnecting', { id: serverId });
+      await cleanupRuntime(serverId);
+      updateServer(serverId, { status: 'disconnected', errorMessage: null, tools: [] });
+    },
+    [cleanupRuntime, updateServer],
+  );
 
   // ---------------------------------------------------------------------------
   // sendMessage – agentic loop: user → Gemini → (function calls) → Gemini → …
@@ -253,8 +358,8 @@ export function useMCPClient(): UseMCPClientReturn {
   const sendMessage = useCallback(async (text: string) => {
     appendMessage('user', text);
 
-    if (!clientRef.current || status !== 'connected') {
-      appendMessage('error', 'Not connected to an MCP server.');
+    if (!isConnected) {
+      appendMessage('error', 'Not connected to any MCP server.');
       return;
     }
 
@@ -263,7 +368,7 @@ export function useMCPClient(): UseMCPClientReturn {
       return;
     }
 
-    const geminiFunctions = mcpToolsToGeminiFunctions(toolDefsRef.current);
+    const geminiFunctions = mcpToolsToGeminiFunctions(tools);
 
     setIsProcessing(true);
     try {
@@ -304,7 +409,7 @@ export function useMCPClient(): UseMCPClientReturn {
           })),
         });
 
-        // Execute each function call via MCP
+        // Execute each function call via the appropriate MCP server
         const functionResponses: Array<{
           name: string;
           response: Record<string, unknown>;
@@ -314,9 +419,27 @@ export function useMCPClient(): UseMCPClientReturn {
           const toolName = fc.name ?? 'unknown';
           appendMessage('assistant', `\uD83D\uDD27 Calling tool: **${toolName}**`);
 
+          // Route the tool call to the correct server
+          const targetServerId = toolToServerRef.current.get(toolName);
+          const runtime = targetServerId
+            ? runtimesRef.current.get(targetServerId)
+            : undefined;
+
+          if (!runtime?.client) {
+            log.error('No server found for tool', { tool: toolName });
+            functionResponses.push({
+              name: toolName,
+              response: {
+                error: `No connected server provides the tool "${toolName}"`,
+                is_error: true,
+              },
+            });
+            continue;
+          }
+
           try {
-            log.debug('Calling MCP tool', { tool: toolName, args: fc.args });
-            const mcpResult = await clientRef.current!.callTool({
+            log.debug('Calling MCP tool', { tool: toolName, server: targetServerId, args: fc.args });
+            const mcpResult = await runtime.client.callTool({
               name: toolName,
               arguments: fc.args as Record<string, unknown>,
             });
@@ -381,7 +504,7 @@ export function useMCPClient(): UseMCPClientReturn {
     } finally {
       setIsProcessing(false);
     }
-  }, [appendMessage, status, apiKey]);
+  }, [appendMessage, isConnected, apiKey, tools]);
 
   // ---------------------------------------------------------------------------
   // AppState lifecycle – pause / resume on background / foreground
@@ -398,34 +521,32 @@ export function useMCPClient(): UseMCPClientReturn {
           prevState === 'active' &&
           (nextState === 'background' || nextState === 'inactive')
         ) {
-          // App is going to the background – pausing stream.
-          log.info('App backgrounded – pausing stream.');
+          log.info('App backgrounded – pausing streams.');
         } else if (
           (prevState === 'background' || prevState === 'inactive') &&
           nextState === 'active'
         ) {
-          // App returned to the foreground – try to resume the stream
           log.info('App foregrounded – attempting stream resume.');
-          const transport = transportRef.current;
-          const url = serverUrlRef.current;
 
-          if (transport && url) {
+          for (const server of serversRef.current) {
+            if (server.status !== 'connected') continue;
+            const runtime = runtimesRef.current.get(server.config.id);
+            if (!runtime?.transport) continue;
+
             try {
-              if (resumptionTokenRef.current) {
-                // Resume from last known event position
-                await transport.resumeStream(resumptionTokenRef.current, {
+              if (runtime.resumptionToken) {
+                await runtime.transport.resumeStream(runtime.resumptionToken, {
                   onresumptiontoken: (token) => {
-                    resumptionTokenRef.current = token;
+                    runtime.resumptionToken = token;
                   },
                 });
-                log.info('Stream resumed with resumption token.');
+                log.info('Stream resumed', { id: server.config.id });
               } else {
-                // No token available – perform a fresh reconnect
-                await connect(url);
+                await connectServer(server.config.id);
               }
             } catch (err) {
-              log.warn('Resume failed, reconnecting from scratch', err);
-              await connect(url);
+              log.warn('Resume failed, reconnecting', { id: server.config.id }, err);
+              await connectServer(server.config.id);
             }
           }
         }
@@ -435,7 +556,7 @@ export function useMCPClient(): UseMCPClientReturn {
     return () => {
       subscription.remove();
     };
-  }, [connect]);
+  }, [connectServer]);
 
   // ---------------------------------------------------------------------------
   // Cleanup on unmount
@@ -443,20 +564,24 @@ export function useMCPClient(): UseMCPClientReturn {
 
   useEffect(() => {
     return () => {
-      cleanupTransport();
+      for (const serverId of runtimesRef.current.keys()) {
+        cleanupRuntime(serverId);
+      }
     };
-  }, [cleanupTransport]);
+  }, [cleanupRuntime]);
 
   return {
-    status,
-    errorMessage,
+    servers,
     tools,
     messages,
     isProcessing,
+    isConnected,
     apiKey,
     setApiKey,
-    connect,
-    disconnect,
+    addServer,
+    removeServer,
+    connectServer,
+    disconnectServer,
     sendMessage,
   };
 }

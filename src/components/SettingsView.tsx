@@ -1,69 +1,101 @@
 /**
  * SettingsView.tsx
  *
- * A simple settings screen that lets the user enter the remote MCP server URL
- * and connect / disconnect.
+ * Settings screen that lets the user configure multiple remote MCP servers,
+ * manage connections, and set the Gemini API key.
  */
 
 import React, { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
-import { MCPTool } from '../hooks/useMCPClient';
+import { ServerState } from '../hooks/useMCPClient';
 
 // ---------------------------------------------------------------------------
 // Props
 // ---------------------------------------------------------------------------
 
 interface SettingsViewProps {
-  status: 'disconnected' | 'connecting' | 'connected' | 'error';
-  errorMessage: string | null;
-  tools: MCPTool[];
+  servers: ServerState[];
   apiKey: string;
   onApiKeyChange: (key: string) => void;
-  onConnect: (url: string) => void;
-  onDisconnect: () => void;
+  onAddServer: (name: string, url: string) => void;
+  onRemoveServer: (serverId: string) => Promise<void>;
+  onConnectServer: (serverId: string) => Promise<void>;
+  onDisconnectServer: (serverId: string) => Promise<void>;
 }
+
+// ---------------------------------------------------------------------------
+// Status helpers
+// ---------------------------------------------------------------------------
+
+const statusColor: Record<ServerState['status'], string> = {
+  disconnected: '#888',
+  connecting: '#f5a623',
+  connected: '#4caf50',
+  error: '#f44336',
+};
+
+const statusLabel: Record<ServerState['status'], string> = {
+  disconnected: 'Disconnected',
+  connecting: 'Connecting…',
+  connected: 'Connected',
+  error: 'Error',
+};
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
 export function SettingsView({
-  status,
-  errorMessage,
-  tools,
+  servers,
   apiKey,
   onApiKeyChange,
-  onConnect,
-  onDisconnect,
+  onAddServer,
+  onRemoveServer,
+  onConnectServer,
+  onDisconnectServer,
 }: SettingsViewProps) {
-  const [url, setUrl] = useState('http://127.0.0.1:7788/mcp');
   const [showApiKey, setShowApiKey] = useState(false);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newUrl, setNewUrl] = useState('');
+  const [expandedServer, setExpandedServer] = useState<string | null>(null);
 
-  const isConnected = status === 'connected';
-  const isConnecting = status === 'connecting';
-
-  const statusColor: Record<SettingsViewProps['status'], string> = {
-    disconnected: '#888',
-    connecting: '#f5a623',
-    connected: '#4caf50',
-    error: '#f44336',
+  const handleAdd = () => {
+    const trimmedName = newName.trim();
+    const trimmedUrl = newUrl.trim();
+    if (!trimmedName || !trimmedUrl) return;
+    onAddServer(trimmedName, trimmedUrl);
+    setNewName('');
+    setNewUrl('');
+    setShowAddForm(false);
   };
 
-  const statusLabel: Record<SettingsViewProps['status'], string> = {
-    disconnected: 'Disconnected',
-    connecting: 'Connecting…',
-    connected: 'Connected',
-    error: 'Error',
+  const handleRemove = (server: ServerState) => {
+    Alert.alert(
+      'Remove Server',
+      `Remove "${server.config.name}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => onRemoveServer(server.config.id),
+        },
+      ],
+    );
   };
 
   return (
@@ -71,89 +103,202 @@ export function SettingsView({
       style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <Text style={styles.title}>MCP Server Settings</Text>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={styles.title}>Settings</Text>
 
-      {/* Status indicator */}
-      <View style={styles.statusRow}>
-        <View style={[styles.statusDot, { backgroundColor: statusColor[status] }]} />
-        <Text style={[styles.statusText, { color: statusColor[status] }]}>
-          {statusLabel[status]}
-        </Text>
-      </View>
-
-      {errorMessage ? (
-        <Text style={styles.errorText}>{errorMessage}</Text>
-      ) : null}
-
-      {/* API Key input */}
-      <Text style={styles.label}>Gemini API Key</Text>
-      <View style={styles.apiKeyRow}>
-        <TextInput
-          style={[styles.input, styles.apiKeyInput]}
-          value={apiKey}
-          onChangeText={onApiKeyChange}
-          placeholder="AIza…"
-          autoCapitalize="none"
-          autoCorrect={false}
-          secureTextEntry={!showApiKey}
-          testID="api-key-input"
-        />
-        <TouchableOpacity
-          style={styles.toggleButton}
-          onPress={() => setShowApiKey((v) => !v)}
-        >
-          <Text style={styles.toggleButtonText}>{showApiKey ? 'Hide' : 'Show'}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* URL input */}
-      <Text style={styles.label}>Server URL</Text>
-      <TextInput
-        style={styles.input}
-        value={url}
-        onChangeText={setUrl}
-        placeholder="https://your-mcp-server.example.com/mcp"
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="url"
-        editable={!isConnecting && !isConnected}
-        testID="server-url-input"
-      />
-
-      {/* Connect / Disconnect button */}
-      {isConnected ? (
-        <TouchableOpacity style={[styles.button, styles.disconnectButton]} onPress={onDisconnect}>
-          <Text style={styles.buttonText}>Disconnect</Text>
-        </TouchableOpacity>
-      ) : (
-        <TouchableOpacity
-          style={[styles.button, isConnecting && styles.buttonDisabled]}
-          onPress={() => onConnect(url)}
-          disabled={isConnecting}
-          testID="connect-button"
-        >
-          {isConnecting ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.buttonText}>Connect</Text>
-          )}
-        </TouchableOpacity>
-      )}
-
-      {/* Tool list */}
-      {tools.length > 0 && (
-        <View style={styles.toolsContainer}>
-          <Text style={styles.toolsTitle}>Available Tools ({tools.length})</Text>
-          {tools.map((tool) => (
-            <View key={tool.name} style={styles.toolItem}>
-              <Text style={styles.toolName}>{tool.name}</Text>
-              {tool.description ? (
-                <Text style={styles.toolDescription}>{tool.description}</Text>
-              ) : null}
-            </View>
-          ))}
+        {/* ── API Key ─────────────────────────────────────────────────── */}
+        <Text style={styles.sectionTitle}>Gemini API Key</Text>
+        <View style={styles.apiKeyRow}>
+          <TextInput
+            style={[styles.input, styles.apiKeyInput]}
+            value={apiKey}
+            onChangeText={onApiKeyChange}
+            placeholder="AIza…"
+            autoCapitalize="none"
+            autoCorrect={false}
+            secureTextEntry={!showApiKey}
+            testID="api-key-input"
+          />
+          <TouchableOpacity
+            style={styles.toggleButton}
+            onPress={() => setShowApiKey((v) => !v)}
+          >
+            <Text style={styles.toggleButtonText}>
+              {showApiKey ? 'Hide' : 'Show'}
+            </Text>
+          </TouchableOpacity>
         </View>
-      )}
+
+        {/* ── MCP Servers ─────────────────────────────────────────────── */}
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>MCP Servers</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowAddForm((v) => !v)}
+          >
+            <Ionicons
+              name={showAddForm ? 'close-circle-outline' : 'add-circle-outline'}
+              size={24}
+              color="#2563eb"
+            />
+          </TouchableOpacity>
+        </View>
+
+        {/* Add-server form */}
+        {showAddForm && (
+          <View style={styles.addForm}>
+            <TextInput
+              style={styles.input}
+              value={newName}
+              onChangeText={setNewName}
+              placeholder="Server name (e.g. My MCP)"
+              autoCapitalize="none"
+              autoCorrect={false}
+              testID="new-server-name"
+            />
+            <TextInput
+              style={[styles.input, { marginTop: 8 }]}
+              value={newUrl}
+              onChangeText={setNewUrl}
+              placeholder="https://your-mcp-server.example.com/mcp"
+              autoCapitalize="none"
+              autoCorrect={false}
+              keyboardType="url"
+              testID="new-server-url"
+            />
+            <TouchableOpacity
+              style={[
+                styles.formButton,
+                (!newName.trim() || !newUrl.trim()) && styles.formButtonDisabled,
+              ]}
+              onPress={handleAdd}
+              disabled={!newName.trim() || !newUrl.trim()}
+              testID="add-server-button"
+            >
+              <Text style={styles.formButtonText}>Add Server</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {/* Server cards */}
+        {servers.length === 0 && !showAddForm && (
+          <Text style={styles.emptyText}>
+            No servers configured. Tap + to add one.
+          </Text>
+        )}
+
+        {servers.map((server) => {
+          const isExpanded = expandedServer === server.config.id;
+          const isServerConnected = server.status === 'connected';
+          const isServerConnecting = server.status === 'connecting';
+
+          return (
+            <View key={server.config.id} style={styles.serverCard}>
+              {/* Card header */}
+              <View style={styles.serverCardHeader}>
+                <View style={styles.serverInfo}>
+                  <View style={styles.serverNameRow}>
+                    <View
+                      style={[
+                        styles.statusDot,
+                        { backgroundColor: statusColor[server.status] },
+                      ]}
+                    />
+                    <Text style={styles.serverName} numberOfLines={1}>
+                      {server.config.name}
+                    </Text>
+                  </View>
+                  <Text style={styles.serverUrl} numberOfLines={1}>
+                    {server.config.url}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.serverStatus,
+                      { color: statusColor[server.status] },
+                    ]}
+                  >
+                    {statusLabel[server.status]}
+                    {isServerConnected && server.tools.length > 0
+                      ? ` · ${server.tools.length} tool${server.tools.length !== 1 ? 's' : ''}`
+                      : ''}
+                  </Text>
+                </View>
+
+                {/* Action buttons */}
+                <View style={styles.serverActions}>
+                  {isServerConnected ? (
+                    <TouchableOpacity
+                      style={styles.iconButton}
+                      onPress={() => onDisconnectServer(server.config.id)}
+                    >
+                      <Ionicons name="stop-circle-outline" size={26} color="#dc2626" />
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.iconButton}
+                      onPress={() => onConnectServer(server.config.id)}
+                      disabled={isServerConnecting}
+                    >
+                      {isServerConnecting ? (
+                        <ActivityIndicator size="small" color="#f5a623" />
+                      ) : (
+                        <Ionicons name="play-circle-outline" size={26} color="#4caf50" />
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={styles.iconButton}
+                    onPress={() => handleRemove(server)}
+                  >
+                    <Ionicons name="trash-outline" size={22} color="#9ca3af" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Error message */}
+              {server.errorMessage ? (
+                <Text style={styles.errorText}>{server.errorMessage}</Text>
+              ) : null}
+
+              {/* Expandable tools list */}
+              {isServerConnected && server.tools.length > 0 && (
+                <>
+                  <TouchableOpacity
+                    style={styles.toolsToggle}
+                    onPress={() =>
+                      setExpandedServer(isExpanded ? null : server.config.id)
+                    }
+                  >
+                    <Text style={styles.toolsToggleText}>
+                      {isExpanded ? 'Hide tools' : 'Show tools'}
+                    </Text>
+                    <Ionicons
+                      name={isExpanded ? 'chevron-up' : 'chevron-down'}
+                      size={16}
+                      color="#2563eb"
+                    />
+                  </TouchableOpacity>
+                  {isExpanded &&
+                    server.tools.map((tool) => (
+                      <View key={tool.name} style={styles.toolItem}>
+                        <Text style={styles.toolName}>{tool.name}</Text>
+                        {tool.description ? (
+                          <Text style={styles.toolDescription}>
+                            {tool.description}
+                          </Text>
+                        ) : null}
+                      </View>
+                    ))}
+                </>
+              )}
+            </View>
+          );
+        })}
+      </ScrollView>
     </KeyboardAvoidingView>
   );
 }
@@ -165,8 +310,14 @@ export function SettingsView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    padding: 20,
     backgroundColor: '#f9f9f9',
+  },
+  scroll: {
+    flex: 1,
+  },
+  scrollContent: {
+    padding: 20,
+    paddingBottom: 40,
   },
   title: {
     fontSize: 22,
@@ -174,47 +325,33 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     color: '#1a1a1a',
   },
-  statusRow: {
+  sectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginTop: 24,
+    marginBottom: 10,
   },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    marginRight: 8,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  errorText: {
-    color: '#f44336',
-    fontSize: 13,
-    marginBottom: 12,
-    lineHeight: 18,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#444',
-    marginTop: 16,
-    marginBottom: 6,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 15,
-    backgroundColor: '#fff',
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
     color: '#1a1a1a',
   },
+  addButton: {
+    padding: 4,
+  },
+  emptyText: {
+    color: '#888',
+    fontSize: 14,
+    marginTop: 8,
+    textAlign: 'center',
+  },
+
+  // API key
   apiKeyRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: 6,
   },
   apiKeyInput: {
     flex: 1,
@@ -231,50 +368,136 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
   },
-  button: {
-    marginTop: 20,
+
+  // Inputs
+  input: {
+    borderWidth: 1,
+    borderColor: '#ccc',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 15,
+    backgroundColor: '#fff',
+    color: '#1a1a1a',
+  },
+
+  // Add form
+  addForm: {
+    backgroundColor: '#fff',
+    borderRadius: 10,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+    marginBottom: 12,
+  },
+  formButton: {
+    marginTop: 12,
     backgroundColor: '#2563eb',
     borderRadius: 8,
-    paddingVertical: 14,
+    paddingVertical: 12,
     alignItems: 'center',
   },
-  buttonDisabled: {
+  formButtonDisabled: {
     backgroundColor: '#93b4f5',
   },
-  disconnectButton: {
-    backgroundColor: '#dc2626',
-  },
-  buttonText: {
+  formButtonText: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '600',
   },
-  toolsContainer: {
-    marginTop: 28,
-  },
-  toolsTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#1a1a1a',
-    marginBottom: 10,
-  },
-  toolItem: {
+
+  // Server card
+  serverCard: {
     backgroundColor: '#fff',
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 8,
+    borderRadius: 10,
+    padding: 14,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#e5e7eb',
   },
+  serverCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  serverInfo: {
+    flex: 1,
+    marginRight: 8,
+  },
+  serverNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  serverName: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1a1a1a',
+    flexShrink: 1,
+  },
+  serverUrl: {
+    fontSize: 12,
+    color: '#888',
+    marginLeft: 14,
+    marginBottom: 2,
+  },
+  serverStatus: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginLeft: 14,
+  },
+  serverActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  iconButton: {
+    padding: 4,
+    marginLeft: 4,
+  },
+
+  // Error
+  errorText: {
+    color: '#f44336',
+    fontSize: 12,
+    marginTop: 6,
+    lineHeight: 16,
+  },
+
+  // Tools
+  toolsToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 10,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+  },
+  toolsToggleText: {
+    fontSize: 13,
+    color: '#2563eb',
+    fontWeight: '600',
+    marginRight: 4,
+  },
+  toolItem: {
+    backgroundColor: '#f9fafb',
+    borderRadius: 6,
+    padding: 10,
+    marginTop: 6,
+  },
   toolName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
     color: '#2563eb',
   },
   toolDescription: {
-    fontSize: 13,
+    fontSize: 12,
     color: '#555',
     marginTop: 2,
-    lineHeight: 18,
+    lineHeight: 16,
   },
 });

@@ -15,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { ChatView } from './src/components/ChatView';
 import { SettingsView } from './src/components/SettingsView';
@@ -34,19 +35,18 @@ export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('chat');
 
   const {
-    status,
-    errorMessage,
-    tools,
+    servers,
     messages,
     isProcessing,
+    isConnected,
     apiKey,
     setApiKey,
-    connect,
-    disconnect,
+    addServer,
+    removeServer,
+    connectServer,
+    disconnectServer,
     sendMessage,
   } = useMCPClient();
-
-  const isConnected = status === 'connected';
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -76,13 +76,13 @@ export default function App() {
           />
         ) : (
           <SettingsView
-            status={status}
-            errorMessage={errorMessage}
-            tools={tools}
+            servers={servers}
             apiKey={apiKey}
             onApiKeyChange={setApiKey}
-            onConnect={connect}
-            onDisconnect={disconnect}
+            onAddServer={addServer}
+            onRemoveServer={removeServer}
+            onConnectServer={connectServer}
+            onDisconnectServer={disconnectServer}
           />
         )}
       </View>
@@ -91,14 +91,16 @@ export default function App() {
       <View style={styles.tabBar}>
         <TabBarButton
           label="Chat"
-          icon="💬"
+          icon="chatbubble-ellipses"
+          iconOutline="chatbubble-ellipses-outline"
           active={activeTab === 'chat'}
           onPress={() => setActiveTab('chat')}
           testID="tab-chat"
         />
         <TabBarButton
           label="Settings"
-          icon="⚙️"
+          icon="settings"
+          iconOutline="settings-outline"
           active={activeTab === 'settings'}
           onPress={() => setActiveTab('settings')}
           testID="tab-settings"
@@ -114,16 +116,21 @@ export default function App() {
 
 interface TabBarButtonProps {
   label: string;
-  icon: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  iconOutline: keyof typeof Ionicons.glyphMap;
   active: boolean;
   onPress: () => void;
   testID?: string;
 }
 
-function TabBarButton({ label, icon, active, onPress, testID }: TabBarButtonProps) {
+function TabBarButton({ label, icon, iconOutline, active, onPress, testID }: TabBarButtonProps) {
   return (
     <TouchableOpacity style={styles.tabButton} onPress={onPress} testID={testID}>
-      <Text style={styles.tabIcon}>{icon}</Text>
+      <Ionicons
+        name={active ? icon : iconOutline}
+        size={22}
+        color={active ? '#2563eb' : '#6b7280'}
+      />
       <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{label}</Text>
       {active && <View style={styles.tabIndicator} />}
     </TouchableOpacity>
@@ -178,7 +185,6 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   tabIcon: {
-    fontSize: 20,
     marginBottom: 2,
   },
   tabLabel: {

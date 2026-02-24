@@ -17,6 +17,7 @@ import {
   View,
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
+import { Ionicons } from '@expo/vector-icons';
 
 import { MCPMessage } from '../hooks/useMCPClient';
 
@@ -107,7 +108,7 @@ export function ChatView({ messages, isConnected, isProcessing, onSend }: ChatVi
           disabled={!isConnected || !input.trim() || isProcessing}
           testID="send-button"
         >
-          <Text style={styles.sendButtonText}>Send</Text>
+          <Ionicons name="send" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
     </KeyboardAvoidingView>
@@ -267,17 +268,13 @@ const styles = StyleSheet.create({
   sendButton: {
     backgroundColor: '#2563eb',
     borderRadius: 20,
-    paddingHorizontal: 18,
-    paddingVertical: 10,
+    width: 42,
+    height: 42,
+    alignItems: 'center',
     justifyContent: 'center',
   },
   sendButtonDisabled: {
     backgroundColor: '#93c5fd',
-  },
-  sendButtonText: {
-    color: '#fff',
-    fontWeight: '600',
-    fontSize: 15,
   },
 });
 
