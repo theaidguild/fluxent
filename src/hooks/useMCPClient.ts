@@ -150,8 +150,13 @@ export function useMCPClient(): UseMCPClientReturn {
   const runtimesRef = useRef<Map<string, ServerRuntime>>(new Map());
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
 
-  /** Conversation history in Gemini Content format */
+  /** Conversation history in Gemini Content format (kept as backup for chat recreation) */
   const conversationRef = useRef<Content[]>([]);
+
+  /** Persistent Gemini Chat instance – reused across turns */
+  const chatRef = useRef<any>(null);
+  /** Key that tracks which tools + API key the current chat was built with */
+  const chatToolsKeyRef = useRef<string>('');
 
   // Keep a ref to the latest servers array so callbacks see fresh data
   const serversRef = useRef<ServerState[]>(servers);
@@ -370,14 +375,24 @@ export function useMCPClient(): UseMCPClientReturn {
 
     const geminiFunctions = mcpToolsToGeminiFunctions(tools);
 
+    // Determine whether we need a fresh chat session
+    const toolsKey = tools.map((t) => t.name).sort().join(',') + '|' + apiKey;
+    const needNewChat = !chatRef.current || chatToolsKeyRef.current !== toolsKey;
+
     setIsProcessing(true);
     try {
-      // Create a new chat session with the full conversation history
-      const chat = createGeminiChat({
-        apiKey,
-        tools: geminiFunctions,
-        history: conversationRef.current,
-      });
+      let chat;
+      if (needNewChat) {
+        chat = createGeminiChat({
+          apiKey,
+          tools: geminiFunctions,
+          history: conversationRef.current,
+        });
+        chatRef.current = chat;
+        chatToolsKeyRef.current = toolsKey;
+      } else {
+        chat = chatRef.current;
+      }
 
       // Send the user message
       let response = await chat.sendMessage({ message: text });
@@ -404,7 +419,7 @@ export function useMCPClient(): UseMCPClientReturn {
         // Store the model's function call response in history
         conversationRef.current.push({
           role: 'model',
-          parts: functionCalls.map((fc) => ({
+          parts: functionCalls.map((fc: { name: string; args: unknown }) => ({
             functionCall: { name: fc.name, args: fc.args },
           })),
         });
@@ -498,6 +513,9 @@ export function useMCPClient(): UseMCPClientReturn {
         appendMessage('error', 'Reached the maximum number of tool-calling rounds.');
       }
     } catch (err) {
+      // Invalidate chat so the next message recreates it with clean state
+      chatRef.current = null;
+      chatToolsKeyRef.current = '';
       const message = err instanceof Error ? err.message : String(err);
       log.error('sendMessage failed', { error: message });
       appendMessage('error', `Error: ${message}`);
@@ -545,7 +563,7 @@ export function useMCPClient(): UseMCPClientReturn {
                 await connectServer(server.config.id);
               }
             } catch (err) {
-              log.warn('Resume failed, reconnecting', { id: server.config.id }, err);
+              log.warn('Resume failed, reconnecting', { id: server.config.id, error: err });
               await connectServer(server.config.id);
             }
           }
