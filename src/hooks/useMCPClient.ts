@@ -128,6 +128,8 @@ export interface UseMCPClientReturn {
   disconnectServer: (serverId: string) => Promise<void>;
   /** Send a user message and get an AI response (with MCP tool calling) */
   sendMessage: (text: string) => Promise<void>;
+  /** Reset chat to its initial state (clears messages, history, and session) */
+  startNewChat: () => void;
 }
 
 // ---------------------------------------------------------------------------
@@ -670,6 +672,19 @@ export function useMCPClient(): UseMCPClientReturn {
   }, [appendMessage, isConnected, apiKey, tools]);
 
   // ---------------------------------------------------------------------------
+  // startNewChat – reset the chat to its initial state
+  // ---------------------------------------------------------------------------
+
+  const startNewChat = useCallback(() => {
+    setMessages([]);
+    conversationRef.current = [];
+    chatRef.current = null;
+    chatToolsKeyRef.current = '';
+    clearSession();
+    _msgId = 0;
+  }, []);
+
+  // ---------------------------------------------------------------------------
   // AppState lifecycle – pause / resume on background / foreground
   // ---------------------------------------------------------------------------
 
@@ -746,5 +761,6 @@ export function useMCPClient(): UseMCPClientReturn {
     connectServer,
     disconnectServer,
     sendMessage,
+    startNewChat,
   };
 }

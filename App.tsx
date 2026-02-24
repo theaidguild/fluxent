@@ -48,6 +48,7 @@ export default function App() {
     connectServer,
     disconnectServer,
     sendMessage,
+    startNewChat,
   } = useMCPClient();
 
   return (
@@ -57,7 +58,16 @@ export default function App() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>MCP Client</Text>
-        <View style={styles.headerStatusDot}>
+        <View style={styles.headerRight}>
+          {activeTab === 'chat' && (
+            <TouchableOpacity
+              style={styles.newChatButton}
+              onPress={startNewChat}
+              testID="new-chat-button"
+            >
+              <Ionicons name="create-outline" size={22} color="#2563eb" />
+            </TouchableOpacity>
+          )}
           <View
             style={[
               styles.statusDot,
@@ -174,8 +184,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1a1a1a',
   },
-  headerStatusDot: {
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  newChatButton: {
     padding: 4,
+    marginRight: 8,
   },
   statusDot: {
     width: 10,

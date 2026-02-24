@@ -14,14 +14,17 @@ export type { Content };
 
 const log = createLogger('Gemini');
 
-const DEFAULT_MODEL = 'gemini-2.0-flash-lite';
+const DEFAULT_MODEL = 'gemini-2.5-flash';
 
 const SYSTEM_PROMPT =
   'You are a helpful AI assistant running inside a mobile MCP client app. ' +
   'You have access to tools provided by a connected MCP (Model Context Protocol) server. ' +
   'Use these tools whenever they can help answer the user\'s questions or accomplish their tasks. ' +
-  'When you call a tool, briefly explain what you are doing and why.' +
-  'When you receive the results of a tool call, use that information to respond to the user\'s message.';
+  'When you call a tool, briefly explain what you are doing and why. ' +
+  'When you receive the results of a tool call, interpret and summarize the information clearly for the user. ' +
+  'Format your responses using Markdown for readability: use headings, bullet points, code blocks, and bold text where appropriate. ' +
+  'Always provide complete, well-structured answers rather than raw data dumps. ' +
+  'If a tool returns an error, explain the issue and suggest alternatives when possible.';
 
 // ---------------------------------------------------------------------------
 // Convert MCP JSON Schema type strings to Gemini Type enum
