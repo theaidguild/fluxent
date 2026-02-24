@@ -26,6 +26,7 @@ import { MCPMessage } from '../hooks/useMCPClient';
 interface ChatViewProps {
   messages: MCPMessage[];
   isConnected: boolean;
+  isProcessing: boolean;
   onSend: (text: string) => void;
 }
 
@@ -33,7 +34,7 @@ interface ChatViewProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ChatView({ messages, isConnected, onSend }: ChatViewProps) {
+export function ChatView({ messages, isConnected, isProcessing, onSend }: ChatViewProps) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<ScrollView>(null);
 
@@ -74,6 +75,13 @@ export function ChatView({ messages, isConnected, onSend }: ChatViewProps) {
         ) : (
           messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
         )}
+        {isProcessing && (
+          <View style={[styles.bubbleWrapper, styles.bubbleLeft]}>
+            <View style={[styles.bubble, styles.bubbleAssistant]}>
+              <Text style={styles.bubbleTextAssistant}>Thinking…</Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
 
       {/* Input row */}
@@ -93,9 +101,9 @@ export function ChatView({ messages, isConnected, onSend }: ChatViewProps) {
           testID="chat-input"
         />
         <TouchableOpacity
-          style={[styles.sendButton, (!isConnected || !input.trim()) && styles.sendButtonDisabled]}
+          style={[styles.sendButton, (!isConnected || !input.trim() || isProcessing) && styles.sendButtonDisabled]}
           onPress={handleSend}
-          disabled={!isConnected || !input.trim()}
+          disabled={!isConnected || !input.trim() || isProcessing}
           testID="send-button"
         >
           <Text style={styles.sendButtonText}>Send</Text>

@@ -33,8 +33,18 @@ type Tab = 'chat' | 'settings';
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('chat');
 
-  const { status, errorMessage, tools, messages, connect, disconnect, sendMessage } =
-    useMCPClient();
+  const {
+    status,
+    errorMessage,
+    tools,
+    messages,
+    isProcessing,
+    apiKey,
+    setApiKey,
+    connect,
+    disconnect,
+    sendMessage,
+  } = useMCPClient();
 
   const isConnected = status === 'connected';
 
@@ -58,12 +68,19 @@ export default function App() {
       {/* Tab content */}
       <View style={styles.content}>
         {activeTab === 'chat' ? (
-          <ChatView messages={messages} isConnected={isConnected} onSend={sendMessage} />
+          <ChatView
+            messages={messages}
+            isConnected={isConnected}
+            isProcessing={isProcessing}
+            onSend={sendMessage}
+          />
         ) : (
           <SettingsView
             status={status}
             errorMessage={errorMessage}
             tools={tools}
+            apiKey={apiKey}
+            onApiKeyChange={setApiKey}
             onConnect={connect}
             onDisconnect={disconnect}
           />

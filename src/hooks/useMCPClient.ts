@@ -16,6 +16,11 @@ import { AppState, AppStateStatus } from 'react-native';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { fetch as streamingFetch } from 'react-native-fetch-api';
+import {
+  Content,
+  mcpToolsToGeminiFunctions,
+  createGeminiChat,
+} from '../services/geminiService';
 
 /**
  * A fetch wrapper that enables text streaming on React Native.
@@ -55,6 +60,7 @@ const mcpFetch = (url: string | URL, init?: RequestInit): Promise<Response> => {
 export interface MCPTool {
   name: string;
   description?: string;
+  inputSchema?: Record<string, unknown>;
 }
 
 export interface MCPMessage {
@@ -73,11 +79,17 @@ export interface UseMCPClientReturn {
   tools: MCPTool[];
   /** Chat message history */
   messages: MCPMessage[];
+  /** Whether the AI is currently processing a response */
+  isProcessing: boolean;
+  /** Gemini API key */
+  apiKey: string;
+  /** Set the Gemini API key */
+  setApiKey: (key: string) => void;
   /** Connect to the given server URL */
   connect: (serverUrl: string) => Promise<void>;
   /** Disconnect from the current server */
   disconnect: () => Promise<void>;
-  /** Send a user message and invoke MCP tool listing as a demo interaction */
+  /** Send a user message and get an AI response (with MCP tool calling) */
   sendMessage: (text: string) => Promise<void>;
 }
 
@@ -98,6 +110,8 @@ export function useMCPClient(): UseMCPClientReturn {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [tools, setTools] = useState<MCPTool[]>([]);
   const [messages, setMessages] = useState<MCPMessage[]>([]);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [apiKey, setApiKey] = useState('');
 
   // Stable refs so callbacks always see the latest values without re-subscribing
   const clientRef = useRef<Client | null>(null);
@@ -106,6 +120,11 @@ export function useMCPClient(): UseMCPClientReturn {
   /** Last resumption token received from the server (for reconnection) */
   const resumptionTokenRef = useRef<string | undefined>(undefined);
   const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+
+  /** Full tool definitions from the MCP server (needed for AI tool calling) */
+  const toolDefsRef = useRef<MCPTool[]>([]);
+  /** Conversation history in Gemini Content format */
+  const conversationRef = useRef<Content[]>([]);
 
   // ---------------------------------------------------------------------------
   // Internal helpers
@@ -138,12 +157,13 @@ export function useMCPClient(): UseMCPClientReturn {
   const refreshTools = useCallback(async (client: Client) => {
     try {
       const result = await client.listTools();
-      setTools(
-        (result.tools ?? []).map((t) => ({
-          name: t.name,
-          description: t.description,
-        })),
-      );
+      const fullTools = (result.tools ?? []).map((t) => ({
+        name: t.name,
+        description: t.description,
+        inputSchema: t.inputSchema as Record<string, unknown>,
+      }));
+      toolDefsRef.current = fullTools;
+      setTools(fullTools);
     } catch (err) {
       console.warn('[MCP] Could not list tools:', err);
     }
@@ -212,11 +232,16 @@ export function useMCPClient(): UseMCPClientReturn {
     setStatus('disconnected');
     setErrorMessage(null);
     setTools([]);
+    toolDefsRef.current = [];
+    conversationRef.current = [];
   }, [cleanupTransport]);
 
   // ---------------------------------------------------------------------------
-  // sendMessage
+  // sendMessage – agentic loop: user → Gemini → (function calls) → Gemini → …
   // ---------------------------------------------------------------------------
+
+  /** Maximum number of tool-calling rounds to prevent runaway loops */
+  const MAX_TOOL_ROUNDS = 10;
 
   const sendMessage = useCallback(async (text: string) => {
     appendMessage('user', text);
@@ -226,26 +251,127 @@ export function useMCPClient(): UseMCPClientReturn {
       return;
     }
 
-    try {
-      // Fetch available tools and return them as a response (demo interaction).
-      // Replace the block below with an actual LLM API call (e.g. OpenAI / Claude)
-      // that uses `clientRef.current` to call tools chosen by the model.
-      const result = await clientRef.current.listTools();
-      const toolNames = (result.tools ?? []).map((t) => t.name);
+    if (!apiKey.trim()) {
+      appendMessage('error', 'Please set your Gemini API key in the Settings tab.');
+      return;
+    }
 
-      if (toolNames.length === 0) {
-        appendMessage('assistant', 'The server has no tools registered.');
-      } else {
-        appendMessage(
-          'assistant',
-          `Available tools on the server:\n${toolNames.map((n) => `• ${n}`).join('\n')}`,
-        );
+    const geminiFunctions = mcpToolsToGeminiFunctions(toolDefsRef.current);
+
+    setIsProcessing(true);
+    try {
+      // Create a new chat session with the full conversation history
+      const chat = createGeminiChat({
+        apiKey,
+        tools: geminiFunctions,
+        history: conversationRef.current,
+      });
+
+      // Send the user message
+      let response = await chat.sendMessage({ message: text });
+
+      // Store the user turn in our conversation history
+      conversationRef.current.push({
+        role: 'user',
+        parts: [{ text }],
+      });
+
+      let rounds = 0;
+
+      while (rounds < MAX_TOOL_ROUNDS) {
+        rounds++;
+
+        // Check if the model wants to call functions
+        const functionCalls = response.functionCalls;
+
+        if (!functionCalls || functionCalls.length === 0) {
+          // No function calls — we have the final text response
+          break;
+        }
+
+        // Store the model's function call response in history
+        conversationRef.current.push({
+          role: 'model',
+          parts: functionCalls.map((fc) => ({
+            functionCall: { name: fc.name, args: fc.args },
+          })),
+        });
+
+        // Execute each function call via MCP
+        const functionResponses: Array<{
+          name: string;
+          response: Record<string, unknown>;
+        }> = [];
+
+        for (const fc of functionCalls) {
+          const toolName = fc.name ?? 'unknown';
+          appendMessage('assistant', `\uD83D\uDD27 Calling tool: **${toolName}**`);
+
+          try {
+            const mcpResult = await clientRef.current!.callTool({
+              name: toolName,
+              arguments: fc.args as Record<string, unknown>,
+            });
+
+            const resultText = (mcpResult.content as Array<{ type: string; text?: string }>)
+              .filter((c) => c.type === 'text' && c.text)
+              .map((c) => c.text)
+              .join('\n') || JSON.stringify(mcpResult.content);
+
+            functionResponses.push({
+              name: toolName,
+              response: {
+                result: resultText,
+                is_error: mcpResult.isError === true,
+              },
+            });
+          } catch (err) {
+            const errMsg = err instanceof Error ? err.message : String(err);
+            functionResponses.push({
+              name: toolName,
+              response: {
+                error: errMsg,
+                is_error: true,
+              },
+            });
+          }
+        }
+
+        // Store function results in history
+        conversationRef.current.push({
+          role: 'user',
+          parts: functionResponses.map((fr) => ({
+            functionResponse: { name: fr.name, response: fr.response },
+          })),
+        });
+
+        // Send function results back to Gemini
+        response = await chat.sendMessage({
+          message: functionResponses.map((fr) => ({
+            functionResponse: { name: fr.name, response: fr.response },
+          })),
+        });
+      }
+
+      // Store the final model response in history
+      if (response.text) {
+        conversationRef.current.push({
+          role: 'model',
+          parts: [{ text: response.text }],
+        });
+        appendMessage('assistant', response.text);
+      }
+
+      if (rounds >= MAX_TOOL_ROUNDS) {
+        appendMessage('error', 'Reached the maximum number of tool-calling rounds.');
       }
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       appendMessage('error', `Error: ${message}`);
+    } finally {
+      setIsProcessing(false);
     }
-  }, [appendMessage, status]);
+  }, [appendMessage, status, apiKey]);
 
   // ---------------------------------------------------------------------------
   // AppState lifecycle – pause / resume on background / foreground
@@ -316,6 +442,9 @@ export function useMCPClient(): UseMCPClientReturn {
     errorMessage,
     tools,
     messages,
+    isProcessing,
+    apiKey,
+    setApiKey,
     connect,
     disconnect,
     sendMessage,

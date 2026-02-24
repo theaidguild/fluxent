@@ -27,6 +27,8 @@ interface SettingsViewProps {
   status: 'disconnected' | 'connecting' | 'connected' | 'error';
   errorMessage: string | null;
   tools: MCPTool[];
+  apiKey: string;
+  onApiKeyChange: (key: string) => void;
   onConnect: (url: string) => void;
   onDisconnect: () => void;
 }
@@ -39,10 +41,13 @@ export function SettingsView({
   status,
   errorMessage,
   tools,
+  apiKey,
+  onApiKeyChange,
   onConnect,
   onDisconnect,
 }: SettingsViewProps) {
-  const [url, setUrl] = useState('http://localhost:3000/mcp');
+  const [url, setUrl] = useState('http://127.0.0.1:7788/mcp');
+  const [showApiKey, setShowApiKey] = useState(false);
 
   const isConnected = status === 'connected';
   const isConnecting = status === 'connecting';
@@ -79,6 +84,27 @@ export function SettingsView({
       {errorMessage ? (
         <Text style={styles.errorText}>{errorMessage}</Text>
       ) : null}
+
+      {/* API Key input */}
+      <Text style={styles.label}>Gemini API Key</Text>
+      <View style={styles.apiKeyRow}>
+        <TextInput
+          style={[styles.input, styles.apiKeyInput]}
+          value={apiKey}
+          onChangeText={onApiKeyChange}
+          placeholder="AIza…"
+          autoCapitalize="none"
+          autoCorrect={false}
+          secureTextEntry={!showApiKey}
+          testID="api-key-input"
+        />
+        <TouchableOpacity
+          style={styles.toggleButton}
+          onPress={() => setShowApiKey((v) => !v)}
+        >
+          <Text style={styles.toggleButtonText}>{showApiKey ? 'Hide' : 'Show'}</Text>
+        </TouchableOpacity>
+      </View>
 
       {/* URL input */}
       <Text style={styles.label}>Server URL</Text>
@@ -185,6 +211,25 @@ const styles = StyleSheet.create({
     fontSize: 15,
     backgroundColor: '#fff',
     color: '#1a1a1a',
+  },
+  apiKeyRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  apiKeyInput: {
+    flex: 1,
+    marginRight: 8,
+  },
+  toggleButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    backgroundColor: '#e5e7eb',
+    borderRadius: 8,
+  },
+  toggleButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
   },
   button: {
     marginTop: 20,
