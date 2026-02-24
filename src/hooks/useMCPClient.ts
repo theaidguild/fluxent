@@ -14,6 +14,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
 import { fetch as streamingFetch } from 'react-native-fetch-api';
@@ -138,6 +139,12 @@ function nextServerId(): string {
 }
 
 // ---------------------------------------------------------------------------
+// Storage keys
+// ---------------------------------------------------------------------------
+const STORAGE_KEY_API_KEY = '@mcp/api_key';
+const STORAGE_KEY_SERVERS = '@mcp/servers';
+
+// ---------------------------------------------------------------------------
 // Hook
 // ---------------------------------------------------------------------------
 
@@ -145,7 +152,8 @@ export function useMCPClient(): UseMCPClientReturn {
   const [servers, setServers] = useState<ServerState[]>([]);
   const [messages, setMessages] = useState<MCPMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [apiKey, setApiKey] = useState('');
+  const [apiKey, setApiKeyState] = useState('');
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
 
   // Runtime data keyed by server id (not in React state – avoids stale closures)
   const runtimesRef = useRef<Map<string, ServerRuntime>>(new Map());
@@ -172,6 +180,87 @@ export function useMCPClient(): UseMCPClientReturn {
     .flatMap((s) => s.tools);
 
   const isConnected = servers.some((s) => s.status === 'connected');
+
+  // ---------------------------------------------------------------------------
+  // Persistence: setApiKey wrapper that also saves to storage
+  // ---------------------------------------------------------------------------
+
+  const setApiKey = useCallback((key: string) => {
+    setApiKeyState(key);
+    AsyncStorage.setItem(STORAGE_KEY_API_KEY, key).catch((err) =>
+      log.warn('Failed to persist API key', err),
+    );
+  }, []);
+
+  // ---------------------------------------------------------------------------
+  // Persistence: save server configs whenever the list changes
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    if (!settingsLoaded) return; // don't persist before initial load
+    const configs = servers.map((s) => s.config);
+    AsyncStorage.setItem(STORAGE_KEY_SERVERS, JSON.stringify(configs)).catch((err) =>
+      log.warn('Failed to persist server configs', err),
+    );
+  }, [servers, settingsLoaded]);
+
+  // ---------------------------------------------------------------------------
+  // Persistence: load settings on mount
+  // ---------------------------------------------------------------------------
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadSettings() {
+      try {
+        const [storedKey, storedServers] = await Promise.all([
+          AsyncStorage.getItem(STORAGE_KEY_API_KEY),
+          AsyncStorage.getItem(STORAGE_KEY_SERVERS),
+        ]);
+
+        if (cancelled) return;
+
+        if (storedKey) {
+          setApiKeyState(storedKey);
+        }
+
+        if (storedServers) {
+          const configs: ServerConfig[] = JSON.parse(storedServers);
+          const loaded: ServerState[] = configs.map((config) => {
+            // Ensure the runtime map has an entry for restored servers
+            if (!runtimesRef.current.has(config.id)) {
+              runtimesRef.current.set(config.id, {
+                client: null,
+                transport: null,
+                resumptionToken: undefined,
+              });
+            }
+            // Keep the _serverId counter above any restored id numbers
+            const num = parseInt(config.id.replace('srv_', ''), 10);
+            if (!isNaN(num) && num >= _serverId) {
+              _serverId = num;
+            }
+            return {
+              config,
+              status: 'disconnected' as const,
+              errorMessage: null,
+              tools: [],
+            };
+          });
+          setServers(loaded);
+        }
+
+        log.info('Settings loaded from storage');
+      } catch (err) {
+        log.warn('Failed to load settings from storage', err);
+      } finally {
+        if (!cancelled) setSettingsLoaded(true);
+      }
+    }
+
+    loadSettings();
+    return () => { cancelled = true; };
+  }, []);
 
   // Build a lookup: tool name → server id (for routing tool calls)
   const toolToServerRef = useRef<Map<string, string>>(new Map());
