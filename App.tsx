@@ -36,6 +36,7 @@ export default function App() {
 
   const {
     servers,
+    tools,
     messages,
     isProcessing,
     isConnected,
@@ -72,6 +73,7 @@ export default function App() {
             messages={messages}
             isConnected={isConnected}
             isProcessing={isProcessing}
+            tools={tools}
             onSend={sendMessage}
           />
         ) : (

@@ -20,7 +20,8 @@ const SYSTEM_PROMPT =
   'You are a helpful AI assistant running inside a mobile MCP client app. ' +
   'You have access to tools provided by a connected MCP (Model Context Protocol) server. ' +
   'Use these tools whenever they can help answer the user\'s questions or accomplish their tasks. ' +
-  'When you call a tool, briefly explain what you are doing and why.';
+  'When you call a tool, briefly explain what you are doing and why.' +
+  'When you receive the results of a tool call, use that information to respond to the user\'s message.';
 
 // ---------------------------------------------------------------------------
 // Convert MCP JSON Schema type strings to Gemini Type enum

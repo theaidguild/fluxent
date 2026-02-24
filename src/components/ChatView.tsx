@@ -12,14 +12,14 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import Markdown from 'react-native-markdown-display';
 import { Ionicons } from '@expo/vector-icons';
 
-import { MCPMessage } from '../hooks/useMCPClient';
+import { MCPMessage, MCPTool } from '../hooks/useMCPClient';
+import { ToolMentionInput } from './ToolMentionInput';
 
 // ---------------------------------------------------------------------------
 // Props
@@ -29,6 +29,7 @@ interface ChatViewProps {
   messages: MCPMessage[];
   isConnected: boolean;
   isProcessing: boolean;
+  tools: MCPTool[];
   onSend: (text: string) => void;
 }
 
@@ -36,7 +37,7 @@ interface ChatViewProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ChatView({ messages, isConnected, isProcessing, onSend }: ChatViewProps) {
+export function ChatView({ messages, isConnected, isProcessing, tools, onSend }: ChatViewProps) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<ScrollView>(null);
 
@@ -88,19 +89,13 @@ export function ChatView({ messages, isConnected, isProcessing, onSend }: ChatVi
 
       {/* Input row */}
       <View style={styles.inputRow}>
-        <TextInput
-          style={[styles.textInput, !isConnected && styles.textInputDisabled]}
+        <ToolMentionInput
           value={input}
           onChangeText={setInput}
-          placeholder={isConnected ? 'Type a message…' : 'Connect to a server first'}
-          placeholderTextColor="#aaa"
-          editable={isConnected}
-          multiline
-          maxLength={2000}
-          returnKeyType="send"
           onSubmitEditing={handleSend}
-          blurOnSubmit={false}
-          testID="chat-input"
+          tools={tools}
+          editable={isConnected}
+          placeholder={isConnected ? 'Type a message…' : 'Connect to a server first'}
         />
         <TouchableOpacity
           style={[styles.sendButton, (!isConnected || !input.trim() || isProcessing) && styles.sendButtonDisabled]}
@@ -246,24 +241,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderTopWidth: 1,
     borderTopColor: '#e5e7eb',
-  },
-  textInput: {
-    flex: 1,
-    minHeight: 42,
-    maxHeight: 120,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    fontSize: 15,
-    backgroundColor: '#f9fafb',
-    color: '#1a1a1a',
-    marginRight: 8,
-  },
-  textInputDisabled: {
-    backgroundColor: '#f3f4f6',
-    color: '#9ca3af',
+    overflow: 'visible' as const,
+    zIndex: 10,
   },
   sendButton: {
     backgroundColor: '#2563eb',

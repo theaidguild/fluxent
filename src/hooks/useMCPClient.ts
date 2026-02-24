@@ -23,6 +23,7 @@ import {
   createGeminiChat,
 } from '../services/geminiService';
 import { createLogger } from '../services/logger';
+import type { Chat } from '@google/genai';
 
 const log = createLogger('MCP');
 
@@ -381,7 +382,7 @@ export function useMCPClient(): UseMCPClientReturn {
 
     setIsProcessing(true);
     try {
-      let chat;
+      let chat: Chat;
       if (needNewChat) {
         chat = createGeminiChat({
           apiKey,
@@ -419,9 +420,14 @@ export function useMCPClient(): UseMCPClientReturn {
         // Store the model's function call response in history
         conversationRef.current.push({
           role: 'model',
-          parts: functionCalls.map((fc: { name: string; args: unknown }) => ({
-            functionCall: { name: fc.name, args: fc.args },
-          })),
+          parts: functionCalls
+            .filter((fc) => fc.name != null)
+            .map((fc) => ({
+              functionCall: {
+                name: fc.name!,
+                args: fc.args as Record<string, unknown> | undefined,
+              },
+            })),
         });
 
         // Execute each function call via the appropriate MCP server
