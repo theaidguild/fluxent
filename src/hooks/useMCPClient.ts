@@ -15,6 +15,38 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus } from 'react-native';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import { fetch as streamingFetch } from 'react-native-fetch-api';
+
+/**
+ * A fetch wrapper that enables text streaming on React Native.
+ * RN's built-in fetch does not expose `response.body` as a ReadableStream;
+ * react-native-fetch-api does when the `reactNative.textStreaming` flag is set.
+ *
+ * We also normalise headers to a plain Record so that react-native-fetch-api
+ * does not fall back to the default `text/plain` Content-Type.
+ */
+const mcpFetch = (url: string | URL, init?: RequestInit): Promise<Response> => {
+  let headers: Record<string, string> = {};
+  if (init?.headers) {
+    if (init.headers instanceof Headers) {
+      init.headers.forEach((value, key) => {
+        headers[key] = value;
+      });
+    } else if (Array.isArray(init.headers)) {
+      for (const [key, value] of init.headers) {
+        headers[key] = value;
+      }
+    } else {
+      headers = { ...init.headers } as Record<string, string>;
+    }
+  }
+
+  return streamingFetch(url, {
+    ...init,
+    headers,
+    reactNative: { textStreaming: true },
+  });
+};
 
 // ---------------------------------------------------------------------------
 // Types
@@ -139,6 +171,7 @@ export function useMCPClient(): UseMCPClientReturn {
       const url = new URL(serverUrl);
 
       const transport = new StreamableHTTPClientTransport(url, {
+        fetch: mcpFetch as any,
         reconnectionOptions: {
           maxRetries: 3,
           initialReconnectionDelay: 1000,
