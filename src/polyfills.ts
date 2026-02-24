@@ -13,6 +13,7 @@ import {
   TransformStream,
   WritableStream,
 } from 'web-streams-polyfill';
+import { fetch as streamingFetch } from 'react-native-fetch-api';
 
 // ---------------------------------------------------------------------------
 // 1. Web Streams API
@@ -60,3 +61,38 @@ if (typeof (globalThis as any).TextDecoderStream === 'undefined') {
 
   (globalThis as any).TextDecoderStream = TextDecoderStreamPolyfill;
 }
+
+// ---------------------------------------------------------------------------
+// 3. Override global fetch with react-native-fetch-api (text streaming)
+// ---------------------------------------------------------------------------
+// React Native's built-in fetch does not expose `response.body` as a
+// ReadableStream. Libraries like @google/genai rely on `response.body.getReader()`
+// for SSE streaming. By replacing the global fetch with the streaming-capable
+// version from react-native-fetch-api, all HTTP consumers (Gemini SDK, MCP SDK)
+// automatically get ReadableStream support.
+
+const _originalFetch = globalThis.fetch;
+(globalThis as any).fetch = (input: any, init?: any) => {
+  // Normalise headers to a plain Record so react-native-fetch-api doesn't
+  // discard them (it doesn't fully support Headers instances).
+  let headers: Record<string, string> = {};
+  if (init?.headers) {
+    if (init.headers instanceof Headers) {
+      init.headers.forEach((value: string, key: string) => {
+        headers[key] = value;
+      });
+    } else if (Array.isArray(init.headers)) {
+      for (const [key, value] of init.headers) {
+        headers[key] = value;
+      }
+    } else {
+      headers = { ...init.headers };
+    }
+  }
+
+  return streamingFetch(input, {
+    ...init,
+    headers,
+    reactNative: { textStreaming: true },
+  });
+};

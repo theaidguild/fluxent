@@ -29,6 +29,7 @@ interface ChatViewProps {
   messages: MCPMessage[];
   isConnected: boolean;
   isProcessing: boolean;
+  isStreaming: boolean;
   tools: MCPTool[];
   onSend: (text: string) => void;
 }
@@ -37,7 +38,7 @@ interface ChatViewProps {
 // Component
 // ---------------------------------------------------------------------------
 
-export function ChatView({ messages, isConnected, isProcessing, tools, onSend }: ChatViewProps) {
+export function ChatView({ messages, isConnected, isProcessing, isStreaming, tools, onSend }: ChatViewProps) {
   const [input, setInput] = useState('');
   const scrollRef = useRef<ScrollView>(null);
 
@@ -78,7 +79,7 @@ export function ChatView({ messages, isConnected, isProcessing, tools, onSend }:
         ) : (
           messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
         )}
-        {isProcessing && (
+        {isProcessing && !isStreaming && (
           <View style={[styles.bubbleWrapper, styles.bubbleLeft]}>
             <View style={[styles.bubble, styles.bubbleAssistant]}>
               <Text style={styles.bubbleTextAssistant}>Thinking…</Text>

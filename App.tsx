@@ -40,6 +40,7 @@ export default function App() {
     tools,
     messages,
     isProcessing,
+    isStreaming,
     isConnected,
     apiKey,
     setApiKey,
@@ -84,6 +85,7 @@ export default function App() {
             messages={messages}
             isConnected={isConnected}
             isProcessing={isProcessing}
+            isStreaming={isStreaming ?? false}
             tools={tools}
             onSend={sendMessage}
           />

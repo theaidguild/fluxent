@@ -112,6 +112,8 @@ export interface UseMCPClientReturn {
   messages: MCPMessage[];
   /** Whether the AI is currently processing a response */
   isProcessing: boolean;
+  /** Whether the AI response is currently being streamed */
+  isStreaming: boolean;
   /** Whether at least one server is connected */
   isConnected: boolean;
   /** Gemini API key */
@@ -159,6 +161,7 @@ export function useMCPClient(): UseMCPClientReturn {
   const [servers, setServers] = useState<ServerState[]>([]);
   const [messages, setMessages] = useState<MCPMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
   const [apiKey, setApiKeyState] = useState('');
   const [settingsLoaded, setSettingsLoaded] = useState(false);
 
@@ -498,8 +501,51 @@ export function useMCPClient(): UseMCPClientReturn {
         chat = chatRef.current;
       }
 
-      // Send the user message
-      let response = await chat.sendMessage({ message: text });
+      // Helper: stream a Gemini response, displaying text chunks in real time.
+      // Returns the accumulated text and any function calls from the response.
+      const streamResponse = async (
+        message: any,
+      ): Promise<{ text: string; functionCalls: ReturnType<typeof chat.sendMessage> extends Promise<infer R> ? R extends { functionCalls: infer F } ? F : undefined : undefined }> => {
+        const stream = await chat.sendMessageStream({ message });
+        let fullText = '';
+        let functionCalls: any;
+        let currentMsgId: string | null = null;
+
+        for await (const chunk of stream) {
+          const chunkText = chunk.text;
+          if (chunkText) {
+            fullText += chunkText;
+            if (!currentMsgId) {
+              currentMsgId = nextId();
+              setIsStreaming(true);
+              setMessages((prev) => [
+                ...prev,
+                {
+                  id: currentMsgId!,
+                  role: 'assistant' as const,
+                  content: fullText,
+                  timestamp: new Date(),
+                },
+              ]);
+            } else {
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === currentMsgId ? { ...m, content: fullText } : m,
+                ),
+              );
+            }
+          }
+          if (chunk.functionCalls && chunk.functionCalls.length > 0) {
+            functionCalls = chunk.functionCalls;
+          }
+        }
+
+        setIsStreaming(false);
+        return { text: fullText, functionCalls };
+      };
+
+      // Stream the user message to Gemini
+      let result = await streamResponse(text);
 
       // Store the user turn in our conversation history
       conversationRef.current.push({
@@ -513,28 +559,28 @@ export function useMCPClient(): UseMCPClientReturn {
         rounds++;
 
         // Check if the model wants to call functions
-        const functionCalls = response.functionCalls;
+        const functionCalls = result.functionCalls;
 
         if (!functionCalls || functionCalls.length === 0) {
-          // No function calls — we have the final text response
+          // No function calls — the final text response was already streamed
           break;
         }
 
         // Log LLM response with function calls
         addSessionLog('llm_response', {
-          text: response.text ?? '',
+          text: result.text ?? '',
           hasFunctionCalls: true,
           functionCallNames: functionCalls
-            .filter((fc) => fc.name != null)
-            .map((fc) => fc.name!),
+            .filter((fc: any) => fc.name != null)
+            .map((fc: any) => fc.name!),
         });
 
         // Store the model's function call response in history
         conversationRef.current.push({
           role: 'model',
           parts: functionCalls
-            .filter((fc) => fc.name != null)
-            .map((fc) => ({
+            .filter((fc: any) => fc.name != null)
+            .map((fc: any) => ({
               functionCall: {
                 name: fc.name!,
                 args: fc.args as Record<string, unknown> | undefined,
@@ -635,25 +681,24 @@ export function useMCPClient(): UseMCPClientReturn {
           })),
         });
 
-        // Send function results back to Gemini
-        response = await chat.sendMessage({
-          message: functionResponses.map((fr) => ({
+        // Stream function results response from Gemini
+        result = await streamResponse(
+          functionResponses.map((fr) => ({
             functionResponse: { name: fr.name, response: fr.response },
           })),
-        });
+        );
       }
 
-      // Store the final model response in history
-      if (response.text) {
+      // Store the final model response in history (text was already streamed to UI)
+      if (result.text) {
         conversationRef.current.push({
           role: 'model',
-          parts: [{ text: response.text }],
+          parts: [{ text: result.text }],
         });
         addSessionLog('llm_response', {
-          text: response.text,
+          text: result.text,
           hasFunctionCalls: false,
         });
-        appendMessage('assistant', response.text);
       }
 
       if (rounds >= MAX_TOOL_ROUNDS) {
@@ -668,6 +713,7 @@ export function useMCPClient(): UseMCPClientReturn {
       appendMessage('error', `Error: ${message}`);
     } finally {
       setIsProcessing(false);
+      setIsStreaming(false);
     }
   }, [appendMessage, isConnected, apiKey, tools]);
 
@@ -753,6 +799,7 @@ export function useMCPClient(): UseMCPClientReturn {
     tools,
     messages,
     isProcessing,
+    isStreaming,
     isConnected,
     apiKey,
     setApiKey,
