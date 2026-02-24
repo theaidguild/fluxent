@@ -24,6 +24,11 @@ import {
   createGeminiChat,
 } from '../services/geminiService';
 import { createLogger } from '../services/logger';
+import {
+  startSession,
+  addSessionLog,
+  clearSession,
+} from '../services/sessionService';
 import type { Chat } from '@google/genai';
 
 const log = createLogger('MCP');
@@ -463,6 +468,13 @@ export function useMCPClient(): UseMCPClientReturn {
       return;
     }
 
+    // Start a new session on the first message of a conversation, or if none exists
+    if (conversationRef.current.length === 0) {
+      startSession();
+    }
+
+    addSessionLog('user_message', { text });
+
     const geminiFunctions = mcpToolsToGeminiFunctions(tools);
 
     // Determine whether we need a fresh chat session
@@ -506,6 +518,15 @@ export function useMCPClient(): UseMCPClientReturn {
           break;
         }
 
+        // Log LLM response with function calls
+        addSessionLog('llm_response', {
+          text: response.text ?? '',
+          hasFunctionCalls: true,
+          functionCallNames: functionCalls
+            .filter((fc) => fc.name != null)
+            .map((fc) => fc.name!),
+        });
+
         // Store the model's function call response in history
         conversationRef.current.push({
           role: 'model',
@@ -547,6 +568,14 @@ export function useMCPClient(): UseMCPClientReturn {
             continue;
           }
 
+          // Log tool request
+          addSessionLog('tool_request', {
+            toolName,
+            serverId: targetServerId ?? 'unknown',
+            args: (fc.args as Record<string, unknown>) ?? {},
+          });
+
+          const toolStart = Date.now();
           try {
             log.debug('Calling MCP tool', { tool: toolName, server: targetServerId, args: fc.args });
             const mcpResult = await runtime.client.callTool({
@@ -559,6 +588,14 @@ export function useMCPClient(): UseMCPClientReturn {
               .map((c) => c.text)
               .join('\n') || JSON.stringify(mcpResult.content);
 
+            // Log tool response
+            addSessionLog('tool_response', {
+              toolName,
+              result: resultText,
+              isError: mcpResult.isError === true,
+              durationMs: Date.now() - toolStart,
+            });
+
             functionResponses.push({
               name: toolName,
               response: {
@@ -569,6 +606,15 @@ export function useMCPClient(): UseMCPClientReturn {
           } catch (err) {
             const errMsg = err instanceof Error ? err.message : String(err);
             log.error('MCP tool call failed', { tool: toolName, error: errMsg });
+
+            // Log tool error response
+            addSessionLog('tool_response', {
+              toolName,
+              result: errMsg,
+              isError: true,
+              durationMs: Date.now() - toolStart,
+            });
+
             functionResponses.push({
               name: toolName,
               response: {
@@ -600,6 +646,10 @@ export function useMCPClient(): UseMCPClientReturn {
         conversationRef.current.push({
           role: 'model',
           parts: [{ text: response.text }],
+        });
+        addSessionLog('llm_response', {
+          text: response.text,
+          hasFunctionCalls: false,
         });
         appendMessage('assistant', response.text);
       }

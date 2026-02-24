@@ -19,13 +19,14 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { ChatView } from './src/components/ChatView';
 import { SettingsView } from './src/components/SettingsView';
+import { SessionView } from './src/components/SessionView';
 import { useMCPClient } from './src/hooks/useMCPClient';
 
 // ---------------------------------------------------------------------------
 // Tab type
 // ---------------------------------------------------------------------------
 
-type Tab = 'chat' | 'settings';
+type Tab = 'chat' | 'session' | 'settings';
 
 // ---------------------------------------------------------------------------
 // App
@@ -76,6 +77,8 @@ export default function App() {
             tools={tools}
             onSend={sendMessage}
           />
+        ) : activeTab === 'session' ? (
+          <SessionView />
         ) : (
           <SettingsView
             servers={servers}
@@ -98,6 +101,14 @@ export default function App() {
           active={activeTab === 'chat'}
           onPress={() => setActiveTab('chat')}
           testID="tab-chat"
+        />
+        <TabBarButton
+          label="Session"
+          icon="list"
+          iconOutline="list-outline"
+          active={activeTab === 'session'}
+          onPress={() => setActiveTab('session')}
+          testID="tab-session"
         />
         <TabBarButton
           label="Settings"
