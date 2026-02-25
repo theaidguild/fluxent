@@ -18,6 +18,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import * as SplashScreen from 'expo-splash-screen';
 
 import { ChatView } from './src/components/ChatView';
 import { SettingsView } from './src/components/SettingsView';
@@ -36,6 +37,7 @@ type Tab = 'chat' | 'session' | 'settings';
 
 export default function App() {
   const [activeTab, setActiveTab] = useState<Tab>('chat');
+  const [appIsReady, setAppIsReady] = useState(false);
 
   const {
     servers,
@@ -53,6 +55,17 @@ export default function App() {
     sendMessage,
     startNewChat,
   } = useMCPClient();
+
+  // Hide splash screen when app is ready
+  useEffect(() => {
+    setAppIsReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (appIsReady) {
+      SplashScreen.hideAsync();
+    }
+  }, [appIsReady]);
 
   return (
     <SafeAreaView style={styles.safeArea}>

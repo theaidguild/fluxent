@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "mobile-mcp-client",
-    "slug": "mobile-mcp-client",
+    "name": "fluxent",
+    "slug": "fluxent",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -10,25 +10,47 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#f0f4ff"
     },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#f0f4ff",
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 200,
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#0a1628"
+          }
+        }
+      ]
+    ],
     "ios": {
       "supportsTablet": true,
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
         }
-      }
+      },
+      "bundleIdentifier": "com.guigiani.fluxent"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#f0f4ff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "package": "com.guigiani.fluxent"
     },
     "web": {
       "favicon": "./assets/favicon.png"
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "110b775f-f7a7-451d-99bc-4e3769049a74"
+      }
+    },
+    "owner": "guigiani"
   }
 }

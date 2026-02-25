@@ -12,3 +12,5 @@ web-build/
 .DS_Store
 npm-debug.*
 *.orig.*
+ios/
+android/
