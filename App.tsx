@@ -285,7 +285,7 @@ const styles = StyleSheet.create({
   statusDot: {
     width: 9,
     height: 9,
-    borderRadius: 5,
+    borderRadius: 4.5,
   },
   content: {
     flex: 1,
