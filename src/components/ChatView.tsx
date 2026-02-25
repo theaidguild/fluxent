@@ -7,6 +7,8 @@
 
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
@@ -71,21 +73,22 @@ export function ChatView({ messages, isConnected, isProcessing, isStreaming, too
         testID="message-scroll-view"
       >
         {messages.length === 0 ? (
-          <Text style={styles.emptyText}>
-            {isConnected
-              ? 'Connected! Type a message to interact with the MCP server.'
-              : 'Connect to an MCP server in the Settings tab to get started.'}
-          </Text>
+          <View style={styles.emptyState}>
+            <Ionicons
+              name={isConnected ? 'chatbubbles-outline' : 'cloud-offline-outline'}
+              size={52}
+              color="#d1d5db"
+            />
+            <Text style={styles.emptyText}>
+              {isConnected
+                ? 'Connected! Type a message to interact with the MCP server.'
+                : 'Connect to an MCP server in the Settings tab to get started.'}
+            </Text>
+          </View>
         ) : (
           messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
         )}
-        {isProcessing && !isStreaming && (
-          <View style={[styles.bubbleWrapper, styles.bubbleLeft]}>
-            <View style={[styles.bubble, styles.bubbleAssistant]}>
-              <Text style={styles.bubbleTextAssistant}>Thinking…</Text>
-            </View>
-          </View>
-        )}
+        {isProcessing && !isStreaming && <ThinkingIndicator />}
       </ScrollView>
 
       {/* Input row */}
@@ -115,15 +118,36 @@ export function ChatView({ messages, isConnected, isProcessing, isStreaming, too
 // MessageBubble sub-component
 // ---------------------------------------------------------------------------
 
+/** Detect tool-call inline messages (e.g. "🔧 Calling tool: **foo**") */
+const TOOL_CALL_PREFIX = '🔧 Calling tool:';
+
 function MessageBubble({ message }: { message: MCPMessage }) {
   const isUser = message.role === 'user';
   const isError = message.role === 'error';
+  const isToolCall =
+    !isUser && !isError && message.content.startsWith(TOOL_CALL_PREFIX);
 
   const mdStyle = useMemo(
     () =>
       isUser ? markdownUserStyles : markdownAssistantStyles,
     [isUser],
   );
+
+  if (isToolCall) {
+    // Extract the tool name from the message content
+    const toolName = message.content
+      .replace(TOOL_CALL_PREFIX, '')
+      .replace(/\*\*/g, '')
+      .trim();
+    return (
+      <View style={styles.toolCallRow}>
+        <Ionicons name="hammer-outline" size={13} color="#6366f1" />
+        <Text style={styles.toolCallText}>
+          {toolName}
+        </Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.bubbleWrapper, isUser ? styles.bubbleRight : styles.bubbleLeft]}>
@@ -154,13 +178,80 @@ function MessageBubble({ message }: { message: MCPMessage }) {
 }
 
 // ---------------------------------------------------------------------------
+// ThinkingIndicator – three animated dots
+// ---------------------------------------------------------------------------
+
+const DOT_DELAY_MS = 160;
+const DOT_ANIMATION_DURATION = 320;
+
+function ThinkingIndicator() {
+  const dot0 = useRef(new Animated.Value(0)).current;
+  const dot1 = useRef(new Animated.Value(0)).current;
+  const dot2 = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    const dots = [dot0, dot1, dot2];
+    const anims = dots.map((dot, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * DOT_DELAY_MS),
+          Animated.timing(dot, {
+            toValue: 1,
+            duration: DOT_ANIMATION_DURATION,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(dot, {
+            toValue: 0,
+            duration: DOT_ANIMATION_DURATION,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.delay((dots.length - 1 - i) * DOT_DELAY_MS),
+        ]),
+      ),
+    );
+    anims.forEach((a) => a.start());
+    return () => anims.forEach((a) => a.stop());
+  }, [dot0, dot1, dot2]);
+
+  const dots = [dot0, dot1, dot2];
+
+  return (
+    <View style={[styles.bubbleWrapper, styles.bubbleLeft]}>
+      <View style={[styles.bubble, styles.bubbleAssistant, styles.thinkingBubble]}>
+        {dots.map((dot, i) => (
+          <Animated.View
+            key={i}
+            style={[
+              styles.thinkingDot,
+              {
+                opacity: dot,
+                transform: [
+                  {
+                    translateY: dot.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, -4],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+        ))}
+      </View>
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Styles
 // ---------------------------------------------------------------------------
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#f5f6fa',
   },
   messageList: {
     flex: 1,
@@ -170,19 +261,26 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
     flexGrow: 1,
   },
-  emptyText: {
+
+  // Empty state
+  emptyState: {
     flex: 1,
-    textAlign: 'center',
-    color: '#888',
-    fontSize: 15,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginTop: 60,
-    paddingHorizontal: 20,
+    paddingHorizontal: 32,
+  },
+  emptyText: {
+    textAlign: 'center',
+    color: '#9ca3af',
+    fontSize: 15,
+    marginTop: 14,
     lineHeight: 22,
   },
 
   // Bubble layout
   bubbleWrapper: {
-    marginVertical: 4,
+    marginVertical: 3,
     maxWidth: '80%',
   },
   bubbleRight: {
@@ -192,7 +290,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   bubble: {
-    borderRadius: 16,
+    borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 10,
   },
@@ -203,8 +301,13 @@ const styles = StyleSheet.create({
   bubbleAssistant: {
     backgroundColor: '#fff',
     borderBottomLeftRadius: 4,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.07,
+    shadowRadius: 4,
+    elevation: 1,
   },
   bubbleError: {
     backgroundColor: '#fef2f2',
@@ -227,11 +330,46 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   timestampUser: {
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(255,255,255,0.65)',
     textAlign: 'right',
   },
   timestampAssistant: {
-    color: '#aaa',
+    color: '#c0c4cc',
+  },
+
+  // Tool call row
+  toolCallRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    marginVertical: 3,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    backgroundColor: '#f5f3ff',
+    borderRadius: 10,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: '#ddd6fe',
+  },
+  toolCallText: {
+    fontSize: 12,
+    color: '#6366f1',
+    fontWeight: '600',
+    marginLeft: 5,
+  },
+
+  // Thinking indicator
+  thinkingBubble: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+  },
+  thinkingDot: {
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#9ca3af',
+    marginHorizontal: 3,
   },
 
   // Input row
@@ -240,8 +378,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
     padding: 10,
     backgroundColor: '#fff',
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 3,
     overflow: 'visible' as const,
     zIndex: 10,
   },

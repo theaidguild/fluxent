@@ -276,14 +276,14 @@ function Row({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#f5f6fa',
   },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
-    backgroundColor: '#f9fafb',
+    backgroundColor: '#f5f6fa',
   },
   emptyText: {
     fontSize: 17,

@@ -6,8 +6,10 @@
  *   • Settings – configure the server URL and manage the connection
  */
 
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Easing,
   SafeAreaView,
   StatusBar,
   StyleSheet,
@@ -58,7 +60,7 @@ export default function App() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>MCP Client</Text>
+        <Text style={styles.headerTitle}>Fluxent</Text>
         <View style={styles.headerRight}>
           {activeTab === 'chat' && (
             <TouchableOpacity
@@ -69,12 +71,7 @@ export default function App() {
               <Ionicons name="create-outline" size={22} color="#2563eb" />
             </TouchableOpacity>
           )}
-          <View
-            style={[
-              styles.statusDot,
-              { backgroundColor: isConnected ? '#4caf50' : '#9ca3af' },
-            ]}
-          />
+          <StatusDot connected={isConnected} />
         </View>
       </View>
 
@@ -136,6 +133,76 @@ export default function App() {
 }
 
 // ---------------------------------------------------------------------------
+// StatusDot – pulses when connected
+// ---------------------------------------------------------------------------
+
+const PULSE_SCALE = 1.6;
+const PULSE_DURATION = 800;
+const PULSE_IDLE_DELAY = 600;
+
+function StatusDot({ connected }: { connected: boolean }) {
+  const scaleAnim = useRef(new Animated.Value(1)).current;
+  const opacityAnim = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    if (!connected) {
+      scaleAnim.setValue(1);
+      opacityAnim.setValue(1);
+      return;
+    }
+    const pulse = Animated.loop(
+      Animated.sequence([
+        Animated.parallel([
+          Animated.timing(scaleAnim, {
+            toValue: PULSE_SCALE,
+            duration: PULSE_DURATION,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 0,
+            duration: PULSE_DURATION,
+            easing: Easing.out(Easing.ease),
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.parallel([
+          Animated.timing(scaleAnim, {
+            toValue: 1,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+          Animated.timing(opacityAnim, {
+            toValue: 1,
+            duration: 0,
+            useNativeDriver: true,
+          }),
+        ]),
+        Animated.delay(PULSE_IDLE_DELAY),
+      ]),
+    );
+    pulse.start();
+    return () => pulse.stop();
+  }, [connected, scaleAnim, opacityAnim]);
+
+  const color = connected ? '#4caf50' : '#9ca3af';
+
+  return (
+    <View style={styles.statusDotWrapper}>
+      {connected && (
+        <Animated.View
+          style={[
+            styles.statusDotRing,
+            { backgroundColor: color, transform: [{ scale: scaleAnim }], opacity: opacityAnim },
+          ]}
+        />
+      )}
+      <View style={[styles.statusDot, { backgroundColor: color }]} />
+    </View>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // TabBarButton
 // ---------------------------------------------------------------------------
 
@@ -151,13 +218,14 @@ interface TabBarButtonProps {
 function TabBarButton({ label, icon, iconOutline, active, onPress, testID }: TabBarButtonProps) {
   return (
     <TouchableOpacity style={styles.tabButton} onPress={onPress} testID={testID}>
-      <Ionicons
-        name={active ? icon : iconOutline}
-        size={22}
-        color={active ? '#2563eb' : '#6b7280'}
-      />
+      <View style={[styles.tabPill, active && styles.tabPillActive]}>
+        <Ionicons
+          name={active ? icon : iconOutline}
+          size={22}
+          color={active ? '#2563eb' : '#6b7280'}
+        />
+      </View>
       <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{label}</Text>
-      {active && <View style={styles.tabIndicator} />}
     </TouchableOpacity>
   );
 }
@@ -178,13 +246,20 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     backgroundColor: '#fff',
-    borderBottomWidth: 1,
+    borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 2,
+    zIndex: 10,
   },
   headerTitle: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: '700',
     color: '#1a1a1a',
+    letterSpacing: -0.3,
   },
   headerRight: {
     flexDirection: 'row',
@@ -192,12 +267,25 @@ const styles = StyleSheet.create({
   },
   newChatButton: {
     padding: 4,
-    marginRight: 8,
+    marginRight: 10,
+  },
+  statusDotWrapper: {
+    width: 12,
+    height: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusDotRing: {
+    position: 'absolute',
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    opacity: 0.4,
   },
   statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    width: 9,
+    height: 9,
+    borderRadius: 4.5,
   },
   content: {
     flex: 1,
@@ -205,33 +293,37 @@ const styles = StyleSheet.create({
   tabBar: {
     flexDirection: 'row',
     backgroundColor: '#fff',
-    borderTopWidth: 1,
+    borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 4,
+    paddingBottom: 4,
   },
   tabButton: {
     flex: 1,
     alignItems: 'center',
-    paddingVertical: 10,
-    position: 'relative',
+    paddingVertical: 8,
   },
-  tabIcon: {
+  tabPill: {
+    width: 44,
+    height: 28,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
     marginBottom: 2,
   },
+  tabPillActive: {
+    backgroundColor: '#eff6ff',
+  },
   tabLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#6b7280',
   },
   tabLabelActive: {
     color: '#2563eb',
     fontWeight: '600',
-  },
-  tabIndicator: {
-    position: 'absolute',
-    bottom: 0,
-    left: '25%',
-    right: '25%',
-    height: 2,
-    backgroundColor: '#2563eb',
-    borderRadius: 1,
   },
 });
