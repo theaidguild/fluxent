@@ -186,9 +186,12 @@ export function SettingsView({
 
         {/* Server cards */}
         {servers.length === 0 && !showAddForm && (
-          <Text style={styles.emptyText}>
-            No servers configured. Tap + to add one.
-          </Text>
+          <View style={styles.emptyServers}>
+            <Ionicons name="server-outline" size={36} color="#d1d5db" />
+            <Text style={styles.emptyText}>
+              No servers configured. Tap + to add one.
+            </Text>
+          </View>
         )}
 
         {servers.map((server) => {
@@ -310,7 +313,7 @@ export function SettingsView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#f5f6fa',
   },
   scroll: {
     flex: 1,
@@ -340,8 +343,13 @@ const styles = StyleSheet.create({
   addButton: {
     padding: 4,
   },
+  emptyServers: {
+    alignItems: 'center',
+    marginTop: 16,
+    marginBottom: 8,
+  },
   emptyText: {
-    color: '#888',
+    color: '#9ca3af',
     fontSize: 14,
     marginTop: 8,
     textAlign: 'center',
@@ -384,11 +392,16 @@ const styles = StyleSheet.create({
   // Add form
   addForm: {
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 14,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#e5e7eb',
     marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 1,
   },
   formButton: {
     marginTop: 12,
@@ -409,11 +422,16 @@ const styles = StyleSheet.create({
   // Server card
   serverCard: {
     backgroundColor: '#fff',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 14,
     marginBottom: 10,
-    borderWidth: 1,
+    borderWidth: StyleSheet.hairlineWidth,
     borderColor: '#e5e7eb',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 4,
+    elevation: 1,
   },
   serverCardHeader: {
     flexDirection: 'row',
