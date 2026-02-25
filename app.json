@@ -31,7 +31,8 @@
       "infoPlist": {
         "NSAppTransportSecurity": {
           "NSAllowsLocalNetworking": true
-        }
+        },
+        "ITSAppUsesNonExemptEncryption": false
       },
       "bundleIdentifier": "com.guigiani.fluxent"
     },
