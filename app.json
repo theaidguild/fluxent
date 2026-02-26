@@ -10,18 +10,18 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "cover",
-      "backgroundColor": "#f0f4ff"
+      "backgroundColor": "#232323"
     },
     "plugins": [
       [
         "expo-splash-screen",
         {
-          "backgroundColor": "#f0f4ff",
+          "backgroundColor": "#232323",
           "image": "./assets/splash-icon.png",
           "resizeMode": "cover",
           "dark": {
             "image": "./assets/splash-icon.png",
-            "backgroundColor": "#0a1628"
+            "backgroundColor": "#000000"
           }
         }
       ]
@@ -39,7 +39,7 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
-        "backgroundColor": "#f0f4ff"
+        "backgroundColor": "#232323"
       },
       // "edgeToEdgeEnabled": true,
       "package": "com.guigiani.fluxent"
