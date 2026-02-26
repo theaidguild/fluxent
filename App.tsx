@@ -69,7 +69,7 @@ export default function App() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#fff" />
+      <StatusBar barStyle="light-content" backgroundColor="#1e1b4b" />
 
       {/* Header */}
       <View style={styles.header}>
@@ -81,7 +81,7 @@ export default function App() {
               onPress={startNewChat}
               testID="new-chat-button"
             >
-              <Ionicons name="create-outline" size={22} color="#2563eb" />
+              <Ionicons name="create-outline" size={22} color="#a78bfa" />
             </TouchableOpacity>
           )}
           <StatusDot connected={isConnected} />
@@ -235,7 +235,7 @@ function TabBarButton({ label, icon, iconOutline, active, onPress, testID }: Tab
         <Ionicons
           name={active ? icon : iconOutline}
           size={22}
-          color={active ? '#2563eb' : '#6b7280'}
+          color={active ? '#a78bfa' : '#9ca3af'}
         />
       </View>
       <Text style={[styles.tabLabel, active && styles.tabLabelActive]}>{label}</Text>
@@ -250,7 +250,7 @@ function TabBarButton({ label, icon, iconOutline, active, onPress, testID }: Tab
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: '#1e1b4b',
   },
   header: {
     flexDirection: 'row',
@@ -258,20 +258,20 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 12,
-    backgroundColor: '#fff',
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#e5e7eb',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
+    backgroundColor: 'rgba(30, 27, 75, 0.95)',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(139, 92, 246, 0.2)',
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
     zIndex: 10,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: '#f3f4f6',
     letterSpacing: -0.3,
   },
   headerRight: {
@@ -305,12 +305,12 @@ const styles = StyleSheet.create({
   },
   tabBar: {
     flexDirection: 'row',
-    backgroundColor: '#fff',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#e5e7eb',
+    backgroundColor: 'rgba(30, 27, 75, 0.95)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(139, 92, 246, 0.2)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -1 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
     paddingBottom: 4,
@@ -329,14 +329,14 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   tabPillActive: {
-    backgroundColor: '#eff6ff',
+    backgroundColor: 'rgba(139, 92, 246, 0.3)',
   },
   tabLabel: {
     fontSize: 11,
-    color: '#6b7280',
+    color: '#9ca3af',
   },
   tabLabelActive: {
-    color: '#2563eb',
+    color: '#c4b5fd',
     fontWeight: '600',
   },
 });

@@ -19,6 +19,7 @@ import {
   View,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
 import { ServerState } from '../hooks/useMCPClient';
 
@@ -99,15 +100,21 @@ export function SettingsView({
   };
 
   return (
-    <KeyboardAvoidingView
+    <LinearGradient
+      colors={['#4c1d95', '#1e1b4b', '#0f172a']}
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
     >
-      <ScrollView
-        style={styles.scroll}
-        contentContainerStyle={styles.scrollContent}
-        keyboardShouldPersistTaps="handled"
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
         <Text style={styles.title}>Settings</Text>
 
         {/* ── API Key ─────────────────────────────────────────────────── */}
@@ -118,6 +125,7 @@ export function SettingsView({
             value={apiKey}
             onChangeText={onApiKeyChange}
             placeholder="AIza…"
+            placeholderTextColor="#94a3b8"
             autoCapitalize="none"
             autoCorrect={false}
             secureTextEntry={!showApiKey}
@@ -143,7 +151,7 @@ export function SettingsView({
             <Ionicons
               name={showAddForm ? 'close-circle-outline' : 'add-circle-outline'}
               size={24}
-              color="#2563eb"
+              color="#a78bfa"
             />
           </TouchableOpacity>
         </View>
@@ -156,6 +164,7 @@ export function SettingsView({
               value={newName}
               onChangeText={setNewName}
               placeholder="Server name (e.g. My MCP)"
+              placeholderTextColor="#94a3b8"
               autoCapitalize="none"
               autoCorrect={false}
               testID="new-server-name"
@@ -165,6 +174,7 @@ export function SettingsView({
               value={newUrl}
               onChangeText={setNewUrl}
               placeholder="https://your-mcp-server.example.com/mcp"
+              placeholderTextColor="#94a3b8"
               autoCapitalize="none"
               autoCorrect={false}
               keyboardType="url"
@@ -282,7 +292,7 @@ export function SettingsView({
                     <Ionicons
                       name={isExpanded ? 'chevron-up' : 'chevron-down'}
                       size={16}
-                      color="#2563eb"
+                      color="#a78bfa"
                     />
                   </TouchableOpacity>
                   {isExpanded &&
@@ -302,7 +312,8 @@ export function SettingsView({
           );
         })}
       </ScrollView>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
@@ -313,7 +324,9 @@ export function SettingsView({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f6fa',
+  },
+  keyboardView: {
+    flex: 1,
   },
   scroll: {
     flex: 1,
@@ -326,7 +339,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: '700',
     marginBottom: 20,
-    color: '#1a1a1a',
+    color: '#f3f4f6',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -338,7 +351,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: '#f3f4f6',
   },
   addButton: {
     padding: 4,
@@ -368,50 +381,50 @@ const styles = StyleSheet.create({
   toggleButton: {
     paddingHorizontal: 12,
     paddingVertical: 10,
-    backgroundColor: '#e5e7eb',
+    backgroundColor: 'rgba(139, 92, 246, 0.3)',
     borderRadius: 8,
   },
   toggleButtonText: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#374151',
+    color: '#e5e7eb',
   },
 
   // Inputs
   input: {
     borderWidth: 1,
-    borderColor: '#ccc',
+    borderColor: 'rgba(139, 92, 246, 0.3)',
     borderRadius: 8,
     paddingHorizontal: 12,
     paddingVertical: 10,
     fontSize: 15,
-    backgroundColor: '#fff',
-    color: '#1a1a1a',
+    backgroundColor: 'rgba(55, 48, 107, 0.5)',
+    color: '#e5e7eb',
   },
 
   // Add form
   addForm: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(30, 27, 75, 0.7)',
     borderRadius: 12,
     padding: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 1,
+    elevation: 2,
   },
   formButton: {
     marginTop: 12,
-    backgroundColor: '#2563eb',
+    backgroundColor: '#8b5cf6',
     borderRadius: 8,
     paddingVertical: 12,
     alignItems: 'center',
   },
   formButtonDisabled: {
-    backgroundColor: '#93b4f5',
+    backgroundColor: 'rgba(139, 92, 246, 0.4)',
   },
   formButtonText: {
     color: '#fff',
@@ -421,17 +434,17 @@ const styles = StyleSheet.create({
 
   // Server card
   serverCard: {
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(55, 48, 107, 0.6)',
     borderRadius: 12,
     padding: 14,
     marginBottom: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#e5e7eb',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 1,
+    elevation: 2,
   },
   serverCardHeader: {
     flexDirection: 'row',
@@ -455,12 +468,12 @@ const styles = StyleSheet.create({
   serverName: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: '#f3f4f6',
     flexShrink: 1,
   },
   serverUrl: {
     fontSize: 12,
-    color: '#888',
+    color: '#9ca3af',
     marginLeft: 14,
     marginBottom: 2,
   },
@@ -480,7 +493,7 @@ const styles = StyleSheet.create({
 
   // Error
   errorText: {
-    color: '#f44336',
+    color: '#f87171',
     fontSize: 12,
     marginTop: 6,
     lineHeight: 16,
@@ -493,16 +506,16 @@ const styles = StyleSheet.create({
     marginTop: 10,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
+    borderTopColor: 'rgba(139, 92, 246, 0.2)',
   },
   toolsToggleText: {
     fontSize: 13,
-    color: '#2563eb',
+    color: '#a78bfa',
     fontWeight: '600',
     marginRight: 4,
   },
   toolItem: {
-    backgroundColor: '#f9fafb',
+    backgroundColor: 'rgba(30, 27, 75, 0.5)',
     borderRadius: 6,
     padding: 10,
     marginTop: 6,
@@ -510,11 +523,11 @@ const styles = StyleSheet.create({
   toolName: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#2563eb',
+    color: '#c4b5fd',
   },
   toolDescription: {
     fontSize: 12,
-    color: '#555',
+    color: '#9ca3af',
     marginTop: 2,
     lineHeight: 16,
   },

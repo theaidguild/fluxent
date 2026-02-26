@@ -14,6 +14,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 
 import {
@@ -39,26 +40,26 @@ const TYPE_CONFIG: Record<
   user_message: {
     label: 'User Message',
     icon: 'person-outline',
-    color: '#2563eb',
-    bg: '#eff6ff',
+    color: '#a78bfa',
+    bg: 'rgba(109, 40, 217, 0.15)',
   },
   tool_request: {
     label: 'Tool Request',
     icon: 'arrow-forward-circle-outline',
-    color: '#7c3aed',
-    bg: '#f5f3ff',
+    color: '#c084fc',
+    bg: 'rgba(168, 85, 247, 0.15)',
   },
   tool_response: {
     label: 'Tool Response',
     icon: 'arrow-back-circle-outline',
-    color: '#059669',
-    bg: '#ecfdf5',
+    color: '#34d399',
+    bg: 'rgba(16, 185, 129, 0.15)',
   },
   llm_response: {
     label: 'LLM Response',
     icon: 'sparkles-outline',
-    color: '#d97706',
-    bg: '#fffbeb',
+    color: '#fbbf24',
+    bg: 'rgba(251, 191, 36, 0.15)',
   },
 };
 
@@ -93,18 +94,28 @@ export function SessionView() {
 
   if (!session) {
     return (
-      <View style={styles.emptyContainer}>
-        <Ionicons name="document-text-outline" size={48} color="#d1d5db" />
+      <LinearGradient
+        colors={['#4c1d95', '#1e1b4b', '#0f172a']}
+        style={styles.emptyContainer}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Ionicons name="document-text-outline" size={48} color="#9ca3af" />
         <Text style={styles.emptyText}>No active session</Text>
         <Text style={styles.emptySubtext}>
           Send a message in the Chat tab to start a session.
         </Text>
-      </View>
+      </LinearGradient>
     );
   }
 
   return (
-    <View style={styles.container}>
+    <LinearGradient
+      colors={['#4c1d95', '#1e1b4b', '#0f172a']}
+      style={styles.container}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+    >
       {/* Session header */}
       <View style={styles.sessionHeader}>
         <Text style={styles.sessionId}>{session.id}</Text>
@@ -129,7 +140,7 @@ export function SessionView() {
           ))
         )}
       </ScrollView>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -276,19 +287,17 @@ function Row({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f6fa',
   },
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
     padding: 32,
-    backgroundColor: '#f5f6fa',
   },
   emptyText: {
     fontSize: 17,
     fontWeight: '600',
-    color: '#6b7280',
+    color: '#d1d5db',
     marginTop: 12,
   },
   emptySubtext: {
@@ -308,18 +317,18 @@ const styles = StyleSheet.create({
   sessionHeader: {
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(30, 27, 75, 0.8)',
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: 'rgba(139, 92, 246, 0.2)',
   },
   sessionId: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1a1a1a',
+    color: '#f3f4f6',
   },
   sessionTime: {
     fontSize: 12,
-    color: '#6b7280',
+    color: '#9ca3af',
     marginTop: 2,
   },
 
@@ -337,9 +346,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     borderRadius: 10,
     borderLeftWidth: 3,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(55, 48, 107, 0.5)',
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: 'rgba(139, 92, 246, 0.3)',
     overflow: 'hidden',
   },
   cardHeader: {
@@ -375,7 +384,7 @@ const styles = StyleSheet.create({
   // Body
   bodyText: {
     fontSize: 14,
-    color: '#1a1a1a',
+    color: '#e5e7eb',
     lineHeight: 20,
   },
   bodyMuted: {
@@ -392,33 +401,33 @@ const styles = StyleSheet.create({
   rowLabel: {
     fontSize: 13,
     fontWeight: '600',
-    color: '#6b7280',
+    color: '#9ca3af',
     width: 100,
   },
   rowValue: {
     fontSize: 13,
-    color: '#1a1a1a',
+    color: '#e5e7eb',
     flex: 1,
   },
 
   // Code block
   codeBlock: {
     marginTop: 6,
-    backgroundColor: '#f3f4f6',
+    backgroundColor: 'rgba(30, 27, 75, 0.6)',
     borderRadius: 6,
     padding: 10,
   },
   codeLabel: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#6b7280',
+    color: '#9ca3af',
     textTransform: 'uppercase',
     marginBottom: 4,
   },
   codeText: {
     fontSize: 12,
     fontFamily: 'monospace',
-    color: '#1a1a1a',
+    color: '#d1d5db',
     lineHeight: 18,
   },
 });

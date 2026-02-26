@@ -17,6 +17,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import Markdown from 'react-native-markdown-display';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -59,13 +60,19 @@ export function ChatView({ messages, isConnected, isProcessing, isStreaming, too
   };
 
   return (
-    <KeyboardAvoidingView
+    <LinearGradient
+      colors={['#4c1d95', '#1e1b4b', '#0f172a']}
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
     >
-      {/* Message list */}
-      <ScrollView
+      <KeyboardAvoidingView
+        style={styles.keyboardView}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
+      >
+        {/* Message list */}
+        <ScrollView
         ref={scrollRef}
         style={styles.messageList}
         contentContainerStyle={styles.messageListContent}
@@ -91,8 +98,8 @@ export function ChatView({ messages, isConnected, isProcessing, isStreaming, too
         {isProcessing && !isStreaming && <ThinkingIndicator />}
       </ScrollView>
 
-      {/* Input row */}
-      <View style={styles.inputRow}>
+        {/* Input row */}
+        <View style={styles.inputRow}>
         <ToolMentionInput
           value={input}
           onChangeText={setInput}
@@ -109,8 +116,9 @@ export function ChatView({ messages, isConnected, isProcessing, isStreaming, too
         >
           <Ionicons name="send" size={20} color="#fff" />
         </TouchableOpacity>
-      </View>
-    </KeyboardAvoidingView>
+        </View>
+      </KeyboardAvoidingView>
+    </LinearGradient>
   );
 }
 
@@ -251,7 +259,9 @@ function ThinkingIndicator() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f6fa',
+  },
+  keyboardView: {
+    flex: 1,
   },
   messageList: {
     flex: 1,
@@ -272,7 +282,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
-    color: '#9ca3af',
+    color: '#d1d5db',
     fontSize: 15,
     marginTop: 14,
     lineHeight: 22,
@@ -290,51 +300,56 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   bubble: {
-    borderRadius: 18,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
   },
   bubbleUser: {
-    backgroundColor: '#2563eb',
-    borderBottomRightRadius: 4,
+    backgroundColor: 'rgba(139, 92, 246, 0.85)',
+    borderBottomRightRadius: 6,
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   bubbleAssistant: {
-    backgroundColor: '#fff',
-    borderBottomLeftRadius: 4,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#e5e7eb',
+    backgroundColor: 'rgba(55, 48, 107, 0.6)',
+    borderBottomLeftRadius: 6,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.07,
-    shadowRadius: 4,
-    elevation: 1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 3,
   },
   bubbleError: {
-    backgroundColor: '#fef2f2',
-    borderBottomLeftRadius: 4,
+    backgroundColor: 'rgba(127, 29, 29, 0.7)',
+    borderBottomLeftRadius: 6,
     borderWidth: 1,
-    borderColor: '#fca5a5',
+    borderColor: 'rgba(239, 68, 68, 0.4)',
   },
   bubbleText: {
     fontSize: 15,
     lineHeight: 22,
   },
   bubbleTextUser: {
-    color: '#fff',
+    color: '#ffffff',
   },
   bubbleTextAssistant: {
-    color: '#1a1a1a',
+    color: '#e5e7eb',
   },
   timestamp: {
-    fontSize: 11,
-    marginTop: 4,
+    fontSize: 10,
+    marginTop: 5,
   },
   timestampUser: {
-    color: 'rgba(255,255,255,0.65)',
+    color: 'rgba(255,255,255,0.6)',
     textAlign: 'right',
   },
   timestampAssistant: {
-    color: '#c0c4cc',
+    color: 'rgba(255,255,255,0.4)',
   },
 
   // Tool call row
@@ -345,14 +360,14 @@ const styles = StyleSheet.create({
     marginVertical: 3,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    backgroundColor: '#f5f3ff',
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
     borderRadius: 10,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: '#ddd6fe',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.4)',
   },
   toolCallText: {
     fontSize: 12,
-    color: '#6366f1',
+    color: '#c4b5fd',
     fontWeight: '600',
     marginLeft: 5,
   },
@@ -368,7 +383,7 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 3.5,
-    backgroundColor: '#9ca3af',
+    backgroundColor: '#a78bfa',
     marginHorizontal: 3,
   },
 
@@ -376,28 +391,33 @@ const styles = StyleSheet.create({
   inputRow: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    padding: 10,
-    backgroundColor: '#fff',
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: '#e5e7eb',
+    padding: 12,
+    backgroundColor: 'rgba(30, 27, 75, 0.8)',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(139, 92, 246, 0.2)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: -1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
     overflow: 'visible' as const,
     zIndex: 10,
   },
   sendButton: {
-    backgroundColor: '#2563eb',
-    borderRadius: 20,
-    width: 42,
-    height: 42,
+    backgroundColor: '#8b5cf6',
+    borderRadius: 22,
+    width: 44,
+    height: 44,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#8b5cf6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sendButtonDisabled: {
-    backgroundColor: '#93c5fd',
+    backgroundColor: 'rgba(139, 92, 246, 0.4)',
   },
 });
 
@@ -406,23 +426,23 @@ const styles = StyleSheet.create({
 // ---------------------------------------------------------------------------
 
 const markdownAssistantStyles = StyleSheet.create({
-  body: { color: '#1a1a1a', fontSize: 15, lineHeight: 22 },
-  paragraph: { marginTop: 0, marginBottom: 6 },
-  heading1: { fontSize: 22, fontWeight: '700', color: '#1a1a1a', marginBottom: 6, marginTop: 8 },
-  heading2: { fontSize: 19, fontWeight: '700', color: '#1a1a1a', marginBottom: 4, marginTop: 6 },
-  heading3: { fontSize: 17, fontWeight: '600', color: '#1a1a1a', marginBottom: 4, marginTop: 6 },
-  strong: { fontWeight: '700' },
+  body: { color: '#e5e7eb', fontSize: 15, lineHeight: 22 },
+  paragraph: { marginTop: 0, marginBottom: 8 },
+  heading1: { fontSize: 22, fontWeight: '700', color: '#ffffff', marginBottom: 8, marginTop: 10 },
+  heading2: { fontSize: 19, fontWeight: '700', color: '#f3f4f6', marginBottom: 6, marginTop: 8 },
+  heading3: { fontSize: 17, fontWeight: '600', color: '#f3f4f6', marginBottom: 6, marginTop: 8 },
+  strong: { fontWeight: '700', color: '#ffffff' },
   em: { fontStyle: 'italic' },
-  link: { color: '#2563eb', textDecorationLine: 'underline' },
+  link: { color: '#c4b5fd', textDecorationLine: 'underline' },
   blockquote: {
     borderLeftWidth: 3,
-    borderLeftColor: '#d1d5db',
+    borderLeftColor: '#8b5cf6',
     paddingLeft: 10,
     marginVertical: 6,
   },
   code_inline: {
-    backgroundColor: '#f3f4f6',
-    color: '#e11d48',
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    color: '#fbbf24',
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     fontSize: 13,
     paddingHorizontal: 4,
@@ -430,7 +450,7 @@ const markdownAssistantStyles = StyleSheet.create({
     borderRadius: 3,
   },
   fence: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: 'rgba(30, 27, 75, 0.5)',
     borderRadius: 8,
     padding: 10,
     marginVertical: 6,
@@ -438,17 +458,17 @@ const markdownAssistantStyles = StyleSheet.create({
   code_block: {
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     fontSize: 13,
-    color: '#1a1a1a',
+    color: '#d1d5db',
   },
   list_item: { marginBottom: 4 },
   bullet_list: { marginVertical: 4 },
   ordered_list: { marginVertical: 4 },
-  hr: { backgroundColor: '#d1d5db', height: 1, marginVertical: 8 },
-  table: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 4, marginVertical: 6 },
-  thead: { backgroundColor: '#f3f4f6' },
-  th: { padding: 6, fontWeight: '600' },
-  td: { padding: 6 },
-  tr: { borderBottomWidth: 1, borderColor: '#e5e7eb' },
+  hr: { backgroundColor: 'rgba(139, 92, 246, 0.3)', height: 1, marginVertical: 8 },
+  table: { borderWidth: 1, borderColor: 'rgba(139, 92, 246, 0.3)', borderRadius: 4, marginVertical: 6 },
+  thead: { backgroundColor: 'rgba(139, 92, 246, 0.2)' },
+  th: { padding: 6, fontWeight: '600', color: '#ffffff' },
+  td: { padding: 6, color: '#e5e7eb' },
+  tr: { borderBottomWidth: 1, borderColor: 'rgba(139, 92, 246, 0.2)' },
 });
 
 // ---------------------------------------------------------------------------

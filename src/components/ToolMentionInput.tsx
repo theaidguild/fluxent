@@ -253,14 +253,14 @@ export function ToolMentionInput({
           onChangeText={onChangeText}
           onSelectionChange={handleSelectionChange}
           placeholder={placeholder}
-          placeholderTextColor="#aaa"
+          placeholderTextColor="#94a3b8"
           editable={editable}
           multiline
           maxLength={2000}
           returnKeyType="send"
           onSubmitEditing={onSubmitEditing}
           blurOnSubmit={false}
-          selectionColor="#2563eb"
+          selectionColor="#a78bfa"
           testID="chat-input"
         />
       </View>
@@ -290,13 +290,14 @@ const styles = StyleSheet.create({
     minHeight: 42,
     maxHeight: 120,
     borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: 20,
-    backgroundColor: '#f9fafb',
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    borderRadius: 22,
+    backgroundColor: 'rgba(55, 48, 107, 0.5)',
     overflow: 'hidden',
   },
   inputWrapperDisabled: {
-    backgroundColor: '#f3f4f6',
+    backgroundColor: 'rgba(55, 48, 107, 0.3)',
+    borderColor: 'rgba(139, 92, 246, 0.2)',
   },
 
   // Styled overlay --------------------------------------------------------
@@ -311,10 +312,10 @@ const styles = StyleSheet.create({
     lineHeight: LINE_HEIGHT,
   },
   normalText: {
-    color: '#1a1a1a',
+    color: '#e5e7eb',
   },
   toolMention: {
-    color: '#6366f1',
+    color: '#c4b5fd',
     fontWeight: '700',
   },
 
@@ -337,17 +338,17 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     marginBottom: 4,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(30, 27, 75, 0.95)',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#e5e7eb',
+    borderColor: 'rgba(139, 92, 246, 0.3)',
     maxHeight: 200,
     zIndex: 100,
     ...Platform.select({
       ios: {
-        shadowColor: '#000',
+        shadowColor: '#8b5cf6',
         shadowOffset: { width: 0, height: -2 },
-        shadowOpacity: 0.1,
+        shadowOpacity: 0.3,
         shadowRadius: 8,
       },
       android: {
@@ -364,7 +365,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: 'rgba(139, 92, 246, 0.2)',
   },
   pickerItemTextContainer: {
     marginLeft: 8,
@@ -373,11 +374,11 @@ const styles = StyleSheet.create({
   pickerToolName: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#1a1a1a',
+    color: '#f3f4f6',
   },
   pickerToolDesc: {
     fontSize: 12,
-    color: '#6b7280',
+    color: '#9ca3af',
     marginTop: 1,
   },
 });
