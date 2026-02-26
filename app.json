@@ -9,7 +9,7 @@
     // "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
-      "resizeMode": "contain",
+      "resizeMode": "cover",
       "backgroundColor": "#f0f4ff"
     },
     "plugins": [
@@ -18,7 +18,7 @@
         {
           "backgroundColor": "#f0f4ff",
           "image": "./assets/splash-icon.png",
-          "imageWidth": 200,
+          "resizeMode": "cover",
           "dark": {
             "image": "./assets/splash-icon.png",
             "backgroundColor": "#0a1628"
