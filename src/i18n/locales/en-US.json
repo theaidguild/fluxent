@@ -1,0 +1,70 @@
+{
+  "app": {
+    "title": "Fluxent"
+  },
+  "tabs": {
+    "chat": "Chat",
+    "session": "Session",
+    "settings": "Settings"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "remove": "Remove",
+    "add": "Add",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "close": "Close",
+    "confirm": "Confirm",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success"
+  },
+  "status": {
+    "disconnected": "Disconnected",
+    "connecting": "Connecting…",
+    "connected": "Connected",
+    "error": "Error"
+  },
+  "chat": {
+    "connected": "Connected! Type a message to interact with the MCP server.",
+    "newChat": "New Chat",
+    "typeMessage": "Type your message...",
+    "send": "Send",
+    "connectionRequired": "Connection required",
+    "notConnected": "Connect to an MCP server in the Settings tab to get started.",
+    "processing": "Processing...",
+    "streaming": "Streaming response..."
+  },
+  "session": {
+    "title": "Session",
+    "messages": "Messages",
+    "noMessages": "No messages yet",
+    "clearSession": "Clear Session",
+    "clearSessionConfirm": "Clear all messages from this session?"
+  },
+  "settings": {
+    "apiKey": "API Key",
+    "apiKeyPlaceholder": "Enter your Gemini API key",
+    "showKey": "Show",
+    "hideKey": "Hide",
+    "servers": "MCP Servers",
+    "addServer": "Add Server",
+    "serverName": "Server Name",
+    "serverUrl": "Server URL",
+    "removeServer": "Remove Server",
+    "removeServerConfirm": "Remove \"{{name}}\"?",
+    "language": "Language",
+    "english": "English",
+    "portuguese": "Português (Brasil)",
+    "apiKeySaved": "API key saved",
+    "noApiKey": "No API key configured",
+    "noServers": "No servers configured"
+  },
+  "tools": {
+    "availableTools": "Available Tools",
+    "noTools": "No tools available",
+    "mention": "Mention tool"
+  }
+}

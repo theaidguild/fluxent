@@ -1,0 +1,70 @@
+{
+  "app": {
+    "title": "Fluxent"
+  },
+  "tabs": {
+    "chat": "Chat",
+    "session": "Sessão",
+    "settings": "Configurações"
+  },
+  "common": {
+    "cancel": "Cancelar",
+    "save": "Salvar",
+    "delete": "Deletar",
+    "remove": "Remover",
+    "add": "Adicionar",
+    "connect": "Conectar",
+    "disconnect": "Desconectar",
+    "close": "Fechar",
+    "confirm": "Confirmar",
+    "loading": "Carregando...",
+    "error": "Erro",
+    "success": "Sucesso"
+  },
+  "status": {
+    "disconnected": "Desconectado",
+    "connecting": "Conectando…",
+    "connected": "Conectado",
+    "error": "Erro"
+  },
+  "chat": {
+    "connected": "Conectado! Digite uma mensagem para interagir com o servidor MCP.",
+    "newChat": "Novo Chat",
+    "typeMessage": "Digite sua mensagem...",
+    "send": "Enviar",
+    "connectionRequired": "Conexão necessária",
+    "notConnected": "Conecte a um servidor MCP na aba Configurações para começar.",
+    "processing": "Processando...",
+    "streaming": "Recebendo resposta..."
+  },
+  "session": {
+    "title": "Sessão",
+    "messages": "Mensagens",
+    "noMessages": "Nenhuma mensagem ainda",
+    "clearSession": "Limpar Sessão",
+    "clearSessionConfirm": "Limpar todas as mensagens desta sessão?"
+  },
+  "settings": {
+    "apiKey": "Chave API",
+    "apiKeyPlaceholder": "Digite sua chave API do Gemini",
+    "showKey": "Mostrar",
+    "hideKey": "Ocultar",
+    "servers": "Servidores MCP",
+    "addServer": "Adicionar Servidor",
+    "serverName": "Nome do Servidor",
+    "serverUrl": "URL do Servidor",
+    "removeServer": "Remover Servidor",
+    "removeServerConfirm": "Remover \"{{name}}\"?",
+    "language": "Idioma",
+    "english": "English",
+    "portuguese": "Português (Brasil)",
+    "apiKeySaved": "Chave API salva",
+    "noApiKey": "Nenhuma chave API configurada",
+    "noServers": "Nenhum servidor configurado"
+  },
+  "tools": {
+    "availableTools": "Ferramentas Disponíveis",
+    "noTools": "Nenhuma ferramenta disponível",
+    "mention": "Mencionar ferramenta"
+  }
+}

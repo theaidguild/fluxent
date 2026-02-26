@@ -19,7 +19,9 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import * as SplashScreen from 'expo-splash-screen';
+import { useTranslation } from 'react-i18next';
 
+import './src/i18n/i18n'; // Initialize i18n
 import { ChatView } from './src/components/ChatView';
 import { SettingsView } from './src/components/SettingsView';
 import { SessionView } from './src/components/SessionView';
@@ -36,6 +38,7 @@ type Tab = 'chat' | 'session' | 'settings';
 // ---------------------------------------------------------------------------
 
 export default function App() {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>('chat');
   const [appIsReady, setAppIsReady] = useState(false);
 
@@ -73,7 +76,7 @@ export default function App() {
 
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Fluxent</Text>
+        <Text style={styles.headerTitle}>{t('app.title')}</Text>
         <View style={styles.headerRight}>
           {activeTab === 'chat' && (
             <TouchableOpacity
@@ -117,7 +120,7 @@ export default function App() {
       {/* Bottom tab bar */}
       <View style={styles.tabBar}>
         <TabBarButton
-          label="Chat"
+          label={t('tabs.chat')}
           icon="chatbubble-ellipses"
           iconOutline="chatbubble-ellipses-outline"
           active={activeTab === 'chat'}
@@ -125,7 +128,7 @@ export default function App() {
           testID="tab-chat"
         />
         <TabBarButton
-          label="Session"
+          label={t('tabs.session')}
           icon="list"
           iconOutline="list-outline"
           active={activeTab === 'session'}
@@ -133,7 +136,7 @@ export default function App() {
           testID="tab-session"
         />
         <TabBarButton
-          label="Settings"
+          label={t('tabs.settings')}
           icon="settings"
           iconOutline="settings-outline"
           active={activeTab === 'settings'}

@@ -10,6 +10,7 @@ import {
   ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -20,6 +21,7 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useTranslation } from 'react-i18next';
 
 import { ServerState } from '../hooks/useMCPClient';
 
@@ -68,11 +70,13 @@ export function SettingsView({
   onConnectServer,
   onDisconnectServer,
 }: SettingsViewProps) {
+  const { t, i18n } = useTranslation();
   const [showApiKey, setShowApiKey] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newName, setNewName] = useState('');
   const [newUrl, setNewUrl] = useState('');
   const [expandedServer, setExpandedServer] = useState<string | null>(null);
+  const [showLanguagePicker, setShowLanguagePicker] = useState(false);
 
   const handleAdd = () => {
     const trimmedName = newName.trim();
@@ -86,12 +90,12 @@ export function SettingsView({
 
   const handleRemove = (server: ServerState) => {
     Alert.alert(
-      'Remove Server',
-      `Remove "${server.config.name}"?`,
+      t('settings.removeServer'),
+      t('settings.removeServerConfirm', { name: server.config.name }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove',
+          text: t('settings.removeServer'),
           style: 'destructive',
           onPress: () => onRemoveServer(server.config.id),
         },
@@ -115,16 +119,70 @@ export function SettingsView({
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-        <Text style={styles.title}>Settings</Text>
+        <Text style={styles.title}>{t('tabs.settings')}</Text>
+
+        {/* ── Language ─────────────────────────────────────────────────── */}
+        <Text style={styles.sectionTitle}>{t('settings.language')}</Text>
+        <TouchableOpacity
+          style={styles.languagePicker}
+          onPress={() => setShowLanguagePicker(true)}
+        >
+          <Text style={styles.languagePickerText}>
+            {i18n.language === 'pt-BR' ? t('settings.portuguese') : t('settings.english')}
+          </Text>
+          <Ionicons name="chevron-down" size={20} color="#a78bfa" />
+        </TouchableOpacity>
+
+        {/* Language Picker Modal */}
+        <Modal
+          visible={showLanguagePicker}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowLanguagePicker(false)}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.modalContent}>
+              <Text style={styles.modalTitle}>{t('settings.language')}</Text>
+              <TouchableOpacity
+                style={[styles.languageOption, i18n.language === 'en-US' && styles.languageOptionActive]}
+                onPress={() => {
+                  i18n.changeLanguage('en-US');
+                  setShowLanguagePicker(false);
+                }}
+              >
+                <Text style={[styles.languageOptionText, i18n.language === 'en-US' && styles.languageOptionTextActive]}>
+                  {t('settings.english')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.languageOption, i18n.language === 'pt-BR' && styles.languageOptionActive]}
+                onPress={() => {
+                  i18n.changeLanguage('pt-BR');
+                  setShowLanguagePicker(false);
+                }}
+              >
+                <Text style={[styles.languageOptionText, i18n.language === 'pt-BR' && styles.languageOptionTextActive]}>
+                  {t('settings.portuguese')}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalCloseButton}
+                onPress={() => setShowLanguagePicker(false)}
+              >
+                <Text style={styles.modalCloseButtonText}>{t('common.cancel')}</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
 
         {/* ── API Key ─────────────────────────────────────────────────── */}
-        <Text style={styles.sectionTitle}>Gemini API Key</Text>
+        <Text style={styles.sectionTitle}>{t('settings.apiKey')}</Text>
         <View style={styles.apiKeyRow}>
           <TextInput
             style={[styles.input, styles.apiKeyInput]}
             value={apiKey}
             onChangeText={onApiKeyChange}
-            placeholder="AIza…"
+            placeholder={t('settings.apiKeyPlaceholder')}
             placeholderTextColor="#94a3b8"
             autoCapitalize="none"
             autoCorrect={false}
@@ -136,14 +194,14 @@ export function SettingsView({
             onPress={() => setShowApiKey((v) => !v)}
           >
             <Text style={styles.toggleButtonText}>
-              {showApiKey ? 'Hide' : 'Show'}
+              {showApiKey ? t('settings.hideKey') : t('settings.showKey')}
             </Text>
           </TouchableOpacity>
         </View>
 
         {/* ── MCP Servers ─────────────────────────────────────────────── */}
         <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>MCP Servers</Text>
+          <Text style={styles.sectionTitle}>{t('settings.servers')}</Text>
           <TouchableOpacity
             style={styles.addButton}
             onPress={() => setShowAddForm((v) => !v)}
@@ -163,7 +221,7 @@ export function SettingsView({
               style={styles.input}
               value={newName}
               onChangeText={setNewName}
-              placeholder="Server name (e.g. My MCP)"
+              placeholder={t('settings.serverName')}
               placeholderTextColor="#94a3b8"
               autoCapitalize="none"
               autoCorrect={false}
@@ -173,7 +231,7 @@ export function SettingsView({
               style={[styles.input, { marginTop: 8 }]}
               value={newUrl}
               onChangeText={setNewUrl}
-              placeholder="https://your-mcp-server.example.com/mcp"
+              placeholder={t('settings.serverUrl')}
               placeholderTextColor="#94a3b8"
               autoCapitalize="none"
               autoCorrect={false}
@@ -189,7 +247,7 @@ export function SettingsView({
               disabled={!newName.trim() || !newUrl.trim()}
               testID="add-server-button"
             >
-              <Text style={styles.formButtonText}>Add Server</Text>
+              <Text style={styles.formButtonText}>{t('settings.addServer')}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -199,7 +257,7 @@ export function SettingsView({
           <View style={styles.emptyServers}>
             <Ionicons name="server-outline" size={36} color="#d1d5db" />
             <Text style={styles.emptyText}>
-              No servers configured. Tap + to add one.
+              {t('settings.noServers')}
             </Text>
           </View>
         )}
@@ -287,7 +345,7 @@ export function SettingsView({
                     }
                   >
                     <Text style={styles.toolsToggleText}>
-                      {isExpanded ? 'Hide tools' : 'Show tools'}
+                      {isExpanded ? t('common.close') : t('tools.availableTools')}
                     </Text>
                     <Ionicons
                       name={isExpanded ? 'chevron-up' : 'chevron-down'}
@@ -388,6 +446,84 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#e5e7eb',
+  },
+
+  // Language picker
+  languagePicker: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    marginTop: 6,
+    marginBottom: 24,
+    backgroundColor: 'rgba(55, 48, 107, 0.5)',
+  },
+  languagePickerText: {
+    color: '#e5e7eb',
+    fontSize: 15,
+    fontWeight: '500',
+  },
+
+  // Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#1e1b4b',
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 30,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(139, 92, 246, 0.3)',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#f3f4f6',
+    marginBottom: 16,
+  },
+  languageOption: {
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderRadius: 8,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: 'rgba(139, 92, 246, 0.2)',
+    backgroundColor: 'rgba(55, 48, 107, 0.4)',
+  },
+  languageOptionActive: {
+    backgroundColor: 'rgba(139, 92, 246, 0.4)',
+    borderColor: 'rgba(139, 92, 246, 0.6)',
+  },
+  languageOptionText: {
+    fontSize: 15,
+    color: '#e5e7eb',
+    fontWeight: '500',
+  },
+  languageOptionTextActive: {
+    color: '#c4b5fd',
+    fontWeight: '600',
+  },
+  modalCloseButton: {
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(139, 92, 246, 0.3)',
+  },
+  modalCloseButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#e5e7eb',
+    textAlign: 'center',
   },
 
   // Inputs

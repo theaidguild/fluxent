@@ -20,6 +20,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import Markdown from 'react-native-markdown-display';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from 'react-i18next';
 
 import { MCPMessage, MCPTool } from '../hooks/useMCPClient';
 import { ToolMentionInput } from './ToolMentionInput';
@@ -42,6 +43,7 @@ interface ChatViewProps {
 // ---------------------------------------------------------------------------
 
 export function ChatView({ messages, isConnected, isProcessing, isStreaming, tools, onSend }: ChatViewProps) {
+  const { t } = useTranslation();
   const [input, setInput] = useState('');
   const scrollRef = useRef<ScrollView>(null);
 
@@ -88,8 +90,8 @@ export function ChatView({ messages, isConnected, isProcessing, isStreaming, too
             />
             <Text style={styles.emptyText}>
               {isConnected
-                ? 'Connected! Type a message to interact with the MCP server.'
-                : 'Connect to an MCP server in the Settings tab to get started.'}
+                ? t('chat.connected')
+                : t('chat.notConnected')}
             </Text>
           </View>
         ) : (
@@ -106,7 +108,7 @@ export function ChatView({ messages, isConnected, isProcessing, isStreaming, too
           onSubmitEditing={handleSend}
           tools={tools}
           editable={isConnected}
-          placeholder={isConnected ? 'Type a message…' : 'Connect to a server first'}
+          placeholder={isConnected ? t('chat.typeMessage') : t('chat.connectionRequired')}
         />
         <TouchableOpacity
           style={[styles.sendButton, (!isConnected || !input.trim() || isProcessing) && styles.sendButtonDisabled]}
