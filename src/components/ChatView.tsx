@@ -429,8 +429,12 @@ const markdownAssistantStyles = StyleSheet.create({
   blockquote: {
     borderLeftWidth: 3,
     borderLeftColor: '#8b5cf6',
+    backgroundColor: 'rgba(139, 92, 246, 0.15)',
     paddingLeft: 10,
+    paddingRight: 10,
+    paddingVertical: 8,
     marginVertical: 6,
+    borderRadius: 4,
   },
   code_inline: {
     backgroundColor: 'rgba(139, 92, 246, 0.2)',
