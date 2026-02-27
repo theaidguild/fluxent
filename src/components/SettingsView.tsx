@@ -132,10 +132,6 @@ export function SettingsView({
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      >
         <ScrollView
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
@@ -486,7 +482,6 @@ export function SettingsView({
           );
         })}
       </ScrollView>
-      </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
@@ -497,9 +492,6 @@ export function SettingsView({
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  keyboardView: {
     flex: 1,
   },
   scroll: {

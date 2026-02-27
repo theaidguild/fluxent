@@ -9,7 +9,6 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
-  KeyboardAvoidingView,
   Platform,
   ScrollView,
   StyleSheet,
@@ -68,11 +67,6 @@ export function ChatView({ messages, isConnected, isProcessing, isStreaming, too
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
     >
-      <KeyboardAvoidingView
-        style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
-      >
         {/* Message list */}
         <ScrollView
         ref={scrollRef}
@@ -119,7 +113,6 @@ export function ChatView({ messages, isConnected, isProcessing, isStreaming, too
           <Ionicons name="send" size={20} color="#fff" />
         </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
     </LinearGradient>
   );
 }
@@ -260,9 +253,6 @@ function ThinkingIndicator() {
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  keyboardView: {
     flex: 1,
   },
   messageList: {

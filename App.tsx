@@ -10,13 +10,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
-  SafeAreaView,
+  KeyboardAvoidingView,
+  Platform,
   StatusBar,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import * as SplashScreen from 'expo-splash-screen';
 import { useTranslation } from 'react-i18next';
@@ -72,10 +74,11 @@ export default function App() {
   }, [appIsReady]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
-      <StatusBar barStyle="light-content" backgroundColor="#1e1b4b" />
+    <SafeAreaProvider>
+      <SafeAreaView style={styles.safeArea}>
+        <StatusBar barStyle="light-content" backgroundColor="#1e1b4b" />
 
-      {/* Header */}
+        {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>{t('app.title')}</Text>
         <View style={styles.headerRight}>
@@ -93,7 +96,10 @@ export default function App() {
       </View>
 
       {/* Tab content */}
-      <View style={styles.content}>
+      <KeyboardAvoidingView
+        style={styles.content}                                                                                                                  
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
         {activeTab === 'chat' ? (
           <ChatView
             messages={messages}
@@ -117,7 +123,7 @@ export default function App() {
             onDisconnectServer={disconnectServer}
           />
         )}
-      </View>
+      </KeyboardAvoidingView>
 
       {/* Bottom tab bar */}
       <View style={styles.tabBar}>
@@ -146,7 +152,8 @@ export default function App() {
           testID="tab-settings"
         />
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 

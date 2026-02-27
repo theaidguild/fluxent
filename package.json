@@ -26,6 +26,7 @@
     "react-native": "0.81.5",
     "react-native-fetch-api": "^3.0.0",
     "react-native-markdown-display": "^7.0.2",
+    "react-native-safe-area-context": "~5.6.0",
     "web-streams-polyfill": "^4.2.0"
   },
   "devDependencies": {
