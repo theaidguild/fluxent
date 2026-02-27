@@ -34,6 +34,7 @@ interface SettingsViewProps {
   apiKey: string;
   onApiKeyChange: (key: string) => void;
   onAddServer: (name: string, url: string) => void;
+  onEditServer: (serverId: string, name: string, url: string) => void;
   onRemoveServer: (serverId: string) => Promise<void>;
   onConnectServer: (serverId: string) => Promise<void>;
   onDisconnectServer: (serverId: string) => Promise<void>;
@@ -66,6 +67,7 @@ export function SettingsView({
   apiKey,
   onApiKeyChange,
   onAddServer,
+  onEditServer,
   onRemoveServer,
   onConnectServer,
   onDisconnectServer,
@@ -77,6 +79,9 @@ export function SettingsView({
   const [newUrl, setNewUrl] = useState('');
   const [expandedServer, setExpandedServer] = useState<string | null>(null);
   const [showLanguagePicker, setShowLanguagePicker] = useState(false);
+  const [editingServerId, setEditingServerId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editUrl, setEditUrl] = useState('');
 
   const handleAdd = () => {
     const trimmedName = newName.trim();
@@ -101,6 +106,23 @@ export function SettingsView({
         },
       ],
     );
+  };
+
+  const handleEditPress = (server: ServerState) => {
+    setEditingServerId(server.config.id);
+    setEditName(server.config.name);
+    setEditUrl(server.config.url);
+  };
+
+  const handleEditSave = () => {
+    if (!editingServerId) return;
+    const trimmedName = editName.trim();
+    const trimmedUrl = editUrl.trim();
+    if (!trimmedName || !trimmedUrl) return;
+    onEditServer(editingServerId, trimmedName, trimmedUrl);
+    setEditingServerId(null);
+    setEditName('');
+    setEditUrl('');
   };
 
   return (
@@ -173,6 +195,84 @@ export function SettingsView({
               </TouchableOpacity>
             </View>
           </View>
+        </Modal>
+
+        {/* Edit Server Modal */}
+        <Modal
+          visible={editingServerId !== null}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => {
+            setEditingServerId(null);
+            setEditName('');
+            setEditUrl('');
+          }}
+        >
+          <KeyboardAvoidingView
+            style={styles.editModalContainer}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+          >
+            <View style={styles.editModalOverlay} />
+            <View style={styles.editModalContent}>
+              <View style={styles.editModalHeader}>
+                <Text style={styles.editModalTitle}>{t('settings.editServer')}</Text>
+                <TouchableOpacity
+                  onPress={() => {
+                    setEditingServerId(null);
+                    setEditName('');
+                    setEditUrl('');
+                  }}
+                >
+                  <Ionicons name="close" size={24} color="#e5e7eb" />
+                </TouchableOpacity>
+              </View>
+
+              <TextInput
+                style={styles.input}
+                value={editName}
+                onChangeText={setEditName}
+                placeholder={t('settings.serverName')}
+                placeholderTextColor="#94a3b8"
+                autoCapitalize="none"
+                autoCorrect={false}
+                testID="edit-server-name"
+              />
+              <TextInput
+                style={[styles.input, { marginTop: 8 }]}
+                value={editUrl}
+                onChangeText={setEditUrl}
+                placeholder={t('settings.serverUrl')}
+                placeholderTextColor="#94a3b8"
+                autoCapitalize="none"
+                autoCorrect={false}
+                keyboardType="url"
+                testID="edit-server-url"
+              />
+
+              <View style={styles.editModalButtons}>
+                <TouchableOpacity
+                  style={styles.editModalButtonCancel}
+                  onPress={() => {
+                    setEditingServerId(null);
+                    setEditName('');
+                    setEditUrl('');
+                  }}
+                >
+                  <Text style={styles.editModalButtonCancelText}>{t('common.cancel')}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.editModalButtonSave,
+                    (!editName.trim() || !editUrl.trim()) && styles.editModalButtonSaveDisabled,
+                  ]}
+                  onPress={handleEditSave}
+                  disabled={!editName.trim() || !editUrl.trim()}
+                >
+                  <Text style={styles.editModalButtonSaveText}>{t('common.save')}</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </KeyboardAvoidingView>
         </Modal>
 
         {/* ── API Key ─────────────────────────────────────────────────── */}
@@ -302,31 +402,47 @@ export function SettingsView({
                 {/* Action buttons */}
                 <View style={styles.serverActions}>
                   {isServerConnected ? (
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={() => onDisconnectServer(server.config.id)}
-                    >
-                      <Ionicons name="stop-circle-outline" size={26} color="#dc2626" />
-                    </TouchableOpacity>
+                    <>
+                      <TouchableOpacity
+                        style={styles.iconButton}
+                        onPress={() => onDisconnectServer(server.config.id)}
+                      >
+                        <Ionicons name="stop-circle-outline" size={26} color="#dc2626" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.iconButton}
+                        onPress={() => handleRemove(server)}
+                      >
+                        <Ionicons name="trash-outline" size={22} color="#9ca3af" />
+                      </TouchableOpacity>
+                    </>
                   ) : (
-                    <TouchableOpacity
-                      style={styles.iconButton}
-                      onPress={() => onConnectServer(server.config.id)}
-                      disabled={isServerConnecting}
-                    >
-                      {isServerConnecting ? (
-                        <ActivityIndicator size="small" color="#f5a623" />
-                      ) : (
-                        <Ionicons name="play-circle-outline" size={26} color="#4caf50" />
-                      )}
-                    </TouchableOpacity>
+                    <>
+                      <TouchableOpacity
+                        style={styles.iconButton}
+                        onPress={() => onConnectServer(server.config.id)}
+                        disabled={isServerConnecting}
+                      >
+                        {isServerConnecting ? (
+                          <ActivityIndicator size="small" color="#f5a623" />
+                        ) : (
+                          <Ionicons name="play-circle-outline" size={26} color="#4caf50" />
+                        )}
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.iconButton}
+                        onPress={() => handleEditPress(server)}
+                      >
+                        <Ionicons name="pencil-outline" size={22} color="#a78bfa" />
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.iconButton}
+                        onPress={() => handleRemove(server)}
+                      >
+                        <Ionicons name="trash-outline" size={22} color="#9ca3af" />
+                      </TouchableOpacity>
+                    </>
                   )}
-                  <TouchableOpacity
-                    style={styles.iconButton}
-                    onPress={() => handleRemove(server)}
-                  >
-                    <Ionicons name="trash-outline" size={22} color="#9ca3af" />
-                  </TouchableOpacity>
                 </View>
               </View>
 
@@ -524,6 +640,67 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#e5e7eb',
     textAlign: 'center',
+  },
+
+  // Edit modal styles
+  editModalContainer: {
+    flex: 1,
+  },
+  editModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  editModalContent: {
+    backgroundColor: '#1e1b4b',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(139, 92, 246, 0.3)',
+  },
+  editModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  editModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#f3f4f6',
+  },
+  editModalButtons: {
+    flexDirection: 'row',
+    marginTop: 16,
+    gap: 10,
+  },
+  editModalButtonCancel: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: 'rgba(139, 92, 246, 0.2)',
+    alignItems: 'center',
+  },
+  editModalButtonCancelText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#e5e7eb',
+  },
+  editModalButtonSave: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    backgroundColor: '#8b5cf6',
+    alignItems: 'center',
+  },
+  editModalButtonSaveDisabled: {
+    backgroundColor: 'rgba(139, 92, 246, 0.4)',
+  },
+  editModalButtonSaveText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#fff',
   },
 
   // Inputs

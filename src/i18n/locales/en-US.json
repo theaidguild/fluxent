@@ -53,6 +53,7 @@
     "addServer": "Add Server",
     "serverName": "Server Name",
     "serverUrl": "Server URL",
+    "editServer": "Edit Server",
     "removeServer": "Remove Server",
     "removeServerConfirm": "Remove \"{{name}}\"?",
     "language": "Language",

@@ -124,6 +124,8 @@ export interface UseMCPClientReturn {
   addServer: (name: string, url: string) => void;
   /** Remove a server configuration (disconnects first) */
   removeServer: (serverId: string) => Promise<void>;
+  /** Edit a server configuration (name and/or URL) */
+  editServer: (serverId: string, name: string, url: string) => void;
   /** Connect a specific server by id */
   connectServer: (serverId: string) => Promise<void>;
   /** Disconnect a specific server by id */
@@ -375,6 +377,18 @@ export function useMCPClient(): UseMCPClientReturn {
     },
     [cleanupRuntime],
   );
+
+  // ---------------------------------------------------------------------------
+  // editServer
+  // ---------------------------------------------------------------------------
+
+  const editServer = useCallback((serverId: string, name: string, url: string) => {
+    setServers((prev) =>
+      prev.map((s) =>
+        s.config.id === serverId ? { ...s, config: { ...s.config, name, url } } : s,
+      ),
+    );
+  }, []);
 
   // ---------------------------------------------------------------------------
   // connectServer
@@ -805,6 +819,7 @@ export function useMCPClient(): UseMCPClientReturn {
     setApiKey,
     addServer,
     removeServer,
+    editServer,
     connectServer,
     disconnectServer,
     sendMessage,

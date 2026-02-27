@@ -10,6 +10,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import {
   Animated,
   Easing,
+  Keyboard,
+  KeyboardEventName,
   SafeAreaView,
   StatusBar,
   StyleSheet,
@@ -41,6 +43,7 @@ export default function App() {
   const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState<Tab>('chat');
   const [appIsReady, setAppIsReady] = useState(false);
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
   const {
     servers,
@@ -53,6 +56,7 @@ export default function App() {
     setApiKey,
     addServer,
     removeServer,
+    editServer,
     connectServer,
     disconnectServer,
     sendMessage,
@@ -69,6 +73,19 @@ export default function App() {
       SplashScreen.hideAsync();
     }
   }, [appIsReady]);
+
+  useEffect(() => {
+    const showEvent: KeyboardEventName = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvent: KeyboardEventName = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+
+    const showSub = Keyboard.addListener(showEvent, () => setIsKeyboardVisible(true));
+    const hideSub = Keyboard.addListener(hideEvent, () => setIsKeyboardVisible(false));
+
+    return () => {
+      showSub.remove();
+      hideSub.remove();
+    };
+  }, []);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -110,6 +127,7 @@ export default function App() {
             apiKey={apiKey}
             onApiKeyChange={setApiKey}
             onAddServer={addServer}
+            onEditServer={editServer}
             onRemoveServer={removeServer}
             onConnectServer={connectServer}
             onDisconnectServer={disconnectServer}
@@ -118,32 +136,34 @@ export default function App() {
       </View>
 
       {/* Bottom tab bar */}
-      <View style={styles.tabBar}>
-        <TabBarButton
-          label={t('tabs.chat')}
-          icon="chatbubble-ellipses"
-          iconOutline="chatbubble-ellipses-outline"
-          active={activeTab === 'chat'}
-          onPress={() => setActiveTab('chat')}
-          testID="tab-chat"
-        />
-        <TabBarButton
-          label={t('tabs.session')}
-          icon="list"
-          iconOutline="list-outline"
-          active={activeTab === 'session'}
-          onPress={() => setActiveTab('session')}
-          testID="tab-session"
-        />
-        <TabBarButton
-          label={t('tabs.settings')}
-          icon="settings"
-          iconOutline="settings-outline"
-          active={activeTab === 'settings'}
-          onPress={() => setActiveTab('settings')}
-          testID="tab-settings"
-        />
-      </View>
+      {!isKeyboardVisible && (
+        <View style={styles.tabBar}>
+          <TabBarButton
+            label={t('tabs.chat')}
+            icon="chatbubble-ellipses"
+            iconOutline="chatbubble-ellipses-outline"
+            active={activeTab === 'chat'}
+            onPress={() => setActiveTab('chat')}
+            testID="tab-chat"
+          />
+          <TabBarButton
+            label={t('tabs.session')}
+            icon="list"
+            iconOutline="list-outline"
+            active={activeTab === 'session'}
+            onPress={() => setActiveTab('session')}
+            testID="tab-session"
+          />
+          <TabBarButton
+            label={t('tabs.settings')}
+            icon="settings"
+            iconOutline="settings-outline"
+            active={activeTab === 'settings'}
+            onPress={() => setActiveTab('settings')}
+            testID="tab-settings"
+          />
+        </View>
+      )}
     </SafeAreaView>
   );
 }
