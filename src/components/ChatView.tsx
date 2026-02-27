@@ -70,7 +70,7 @@ export function ChatView({ messages, isConnected, isProcessing, isStreaming, too
     >
       <KeyboardAvoidingView
         style={styles.keyboardView}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         keyboardVerticalOffset={0}
       >
         {/* Message list */}
