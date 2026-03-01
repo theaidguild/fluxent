@@ -35,7 +35,8 @@
     "connectionRequired": "Conexão necessária",
     "notConnected": "Conecte a um servidor MCP na aba Configurações para começar.",
     "processing": "Processando...",
-    "streaming": "Recebendo resposta..."
+    "streaming": "Recebendo resposta...",
+    "copied": "Mensagem copiada"
   },
   "session": {
     "title": "Sessão",

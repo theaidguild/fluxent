@@ -226,26 +226,8 @@ export function ToolMentionInput({
         </View>
       )}
 
-      {/* Input wrapper – overlay + real input */}
+      {/* Input wrapper */}
       <View style={[styles.inputWrapper, !editable && styles.inputWrapperDisabled]}>
-        {/* Styled text overlay (not interactive) */}
-        {value.length > 0 && (
-          <Text style={styles.styledText} pointerEvents="none">
-            {segments.map((seg, i) =>
-              seg.type === 'tool' ? (
-                <Text key={i} style={styles.toolMention}>
-                  {seg.value}
-                </Text>
-              ) : (
-                <Text key={i} style={styles.normalText}>
-                  {seg.value}
-                </Text>
-              ),
-            )}
-          </Text>
-        )}
-
-        {/* Transparent TextInput (captures all interaction) */}
         <TextInput
           ref={inputRef}
           style={styles.textInput}
@@ -256,8 +238,8 @@ export function ToolMentionInput({
           placeholderTextColor="#94a3b8"
           editable={editable}
           multiline
-          maxLength={2000}
-          returnKeyType="send"
+          maxLength={4000}
+          returnKeyType="default"
           onSubmitEditing={onSubmitEditing}
           blurOnSubmit={false}
           selectionColor="#a78bfa"
@@ -288,7 +270,7 @@ const styles = StyleSheet.create({
   inputWrapper: {
     position: 'relative',
     minHeight: 42,
-    maxHeight: 120,
+    maxHeight: 200,
     borderWidth: 1,
     borderColor: 'rgba(139, 92, 246, 0.3)',
     borderRadius: 22,
@@ -300,34 +282,15 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(139, 92, 246, 0.2)',
   },
 
-  // Styled overlay --------------------------------------------------------
-  styledText: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    paddingHorizontal: PADDING_H,
-    paddingVertical: PADDING_V,
-    fontSize: FONT_SIZE,
-    lineHeight: LINE_HEIGHT,
-  },
-  normalText: {
-    color: '#e5e7eb',
-  },
-  toolMention: {
-    color: '#c4b5fd',
-    fontWeight: '700',
-  },
-
-  // Transparent TextInput -------------------------------------------------
+  // TextInput --------------------------------------------------------------
   textInput: {
     minHeight: 42,
-    maxHeight: 120,
+    maxHeight: 200,
     paddingHorizontal: PADDING_H,
     paddingVertical: PADDING_V,
     fontSize: FONT_SIZE,
     lineHeight: LINE_HEIGHT,
-    color: 'transparent',
+    color: '#e5e7eb',
     backgroundColor: 'transparent',
   },
 

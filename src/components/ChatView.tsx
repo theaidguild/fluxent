@@ -5,17 +5,20 @@
  * the MCP server displayed in conversation bubbles.
  */
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   Animated,
   Easing,
   Platform,
+  Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import * as Clipboard from 'expo-clipboard';
 import { LinearGradient } from 'expo-linear-gradient';
 import Markdown from 'react-native-markdown-display';
 import { Ionicons } from '@expo/vector-icons';
@@ -89,7 +92,7 @@ export function ChatView({ messages, isConnected, isProcessing, isStreaming, too
             </Text>
           </View>
         ) : (
-          messages.map((msg) => <MessageBubble key={msg.id} message={msg} />)
+          messages.map((msg) => <MessageBubble key={msg.id} message={msg} copiedLabel={t('chat.copied')} />)
         )}
         {isProcessing && !isStreaming && <ThinkingIndicator />}
       </ScrollView>
@@ -124,7 +127,7 @@ export function ChatView({ messages, isConnected, isProcessing, isStreaming, too
 /** Detect tool-call inline messages (e.g. "🔧 Calling tool: **foo**") */
 const TOOL_CALL_PREFIX = '🔧 Calling tool:';
 
-function MessageBubble({ message }: { message: MCPMessage }) {
+function MessageBubble({ message, copiedLabel }: { message: MCPMessage; copiedLabel: string }) {
   const isUser = message.role === 'user';
   const isError = message.role === 'error';
   const isToolCall =
@@ -135,6 +138,11 @@ function MessageBubble({ message }: { message: MCPMessage }) {
       isUser ? markdownUserStyles : markdownAssistantStyles,
     [isUser],
   );
+
+  const handleLongPress = useCallback(() => {
+    Clipboard.setStringAsync(message.content);
+    Alert.alert(copiedLabel);
+  }, [message.content, copiedLabel]);
 
   if (isToolCall) {
     // Extract the tool name from the message content
@@ -153,30 +161,32 @@ function MessageBubble({ message }: { message: MCPMessage }) {
   }
 
   return (
-    <View style={[styles.bubbleWrapper, isUser ? styles.bubbleRight : styles.bubbleLeft]}>
-      <View
-        style={[
-          styles.bubble,
-          isUser ? styles.bubbleUser : isError ? styles.bubbleError : styles.bubbleAssistant,
-        ]}
-      >
-        {isUser || isError ? (
-          <Text
-            style={[
-              styles.bubbleText,
-              isUser ? styles.bubbleTextUser : styles.bubbleTextAssistant,
-            ]}
-          >
-            {message.content}
+    <Pressable onLongPress={handleLongPress}>
+      <View style={[styles.bubbleWrapper, isUser ? styles.bubbleRight : styles.bubbleLeft]}>
+        <View
+          style={[
+            styles.bubble,
+            isUser ? styles.bubbleUser : isError ? styles.bubbleError : styles.bubbleAssistant,
+          ]}
+        >
+          {isUser || isError ? (
+            <Text
+              style={[
+                styles.bubbleText,
+                isUser ? styles.bubbleTextUser : styles.bubbleTextAssistant,
+              ]}
+            >
+              {message.content}
+            </Text>
+          ) : (
+            <Markdown style={mdStyle}>{message.content}</Markdown>
+          )}
+          <Text style={[styles.timestamp, isUser ? styles.timestampUser : styles.timestampAssistant]}>
+            {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
           </Text>
-        ) : (
-          <Markdown style={mdStyle}>{message.content}</Markdown>
-        )}
-        <Text style={[styles.timestamp, isUser ? styles.timestampUser : styles.timestampAssistant]}>
-          {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </Text>
+        </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
